@@ -16,7 +16,8 @@
 - `services/`     → Pure business logic. No Flask imports, no direct SQL.
 - `repositories/` → All SQL lives here. No business logic. Always use parameterized queries.
 - `utils/`        → Shared decorators and helpers (token_required, roles_required).
-- `migrations/`   → Versioned SQL files. Never modify an already-applied migration.
+- `database/migrations/` → Versioned SQL files. Never modify an already-applied migration.
+- `database/schema.sql`  → Master schema reference only. Never run directly.
 
 ### Never
 - Never put SQL in routes or services
@@ -30,7 +31,7 @@
 ## Database
 
 ### Migrations
-- All schema changes go through `migrations/` as versioned SQL files
+- All schema changes go through `database/migrations/` as versioned SQL files
 - Naming convention: `NNN_description.sql` (e.g. `003_create_buses_table.sql`)
 - Run with `python migrate.py` — never apply SQL manually to production
 - Never modify an existing migration file — create a new one instead
@@ -96,8 +97,8 @@
 ### Roles
 - `super_admin` — full platform access
 - `rental_company` — manages their own vehicles and rentals
-- `agency` — manages buses, routes, schedules
-- `customer` — books trips, views own bookings
+- `agency_admin` — manages buses, routes, schedules
+- `passenger` — books trips, views own bookings
 
 ### Passwords
 - Always hash with bcrypt before storing

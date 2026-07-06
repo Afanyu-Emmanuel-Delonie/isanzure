@@ -59,23 +59,7 @@ def create_review(agency_id, user_id, booking_id, rating, comment):
             conn.commit()
             return cur.fetchone()
 
-def create_bus(plate_number, capacity, agency_id):
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO buses (plate_number, capacity, agency_id) VALUES (%s, %s, %s) RETURNING id;",
-                (plate_number, capacity, agency_id)
-            )
-            return cur.fetchone()[0]
 
-def get_buses_by_agency(agency_id):
-    with get_db_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id, plate_number, capacity, status FROM buses WHERE agency_id = %s;",
-                (agency_id,)
-            )
-            return cur.fetchall()
 
 def get_reviews_by_agency(agency_id):
     with get_db_connection() as conn:

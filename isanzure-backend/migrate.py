@@ -6,7 +6,7 @@ import os
 import psycopg2
 from config import settings
 
-MIGRATIONS_DIR = os.path.join(os.path.dirname(__file__), "migrations")
+MIGRATIONS_DIR = os.path.join(os.path.dirname(__file__), "database", "migrations")
 
 
 def get_conn():

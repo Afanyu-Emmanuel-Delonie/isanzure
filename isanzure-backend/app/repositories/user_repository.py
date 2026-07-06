@@ -6,11 +6,11 @@ def get_db_connection():
     return psycopg2.connect(settings.DATABASE_URL)
 
 
-def create_user(name, email, phone, password_hash, role='customer'):
+def create_user(name, email, phone, password_hash, role='passenger'):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO users (name, email, phone, password_hash, role) VALUES (%s, %s, %s, %s, %s) RETURNING id;",
+                "INSERT INTO users (name, email, phone_number, password_hash, role) VALUES (%s, %s, %s, %s, %s) RETURNING id;",
                 (name, email, phone, password_hash, role)
             )
             return cur.fetchone()[0]
@@ -26,7 +26,7 @@ def get_user_by_email(email):
 def get_user_by_id(user_id):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id, name, email, phone, role, created_at FROM users WHERE id = %s;", (user_id,))
+            cur.execute("SELECT id, name, email, phone_number, role, agency_id, created_at FROM users WHERE id = %s;", (user_id,))
             return cur.fetchone()
 
 

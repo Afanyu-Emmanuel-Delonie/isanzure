@@ -3,7 +3,7 @@ from flask import request, jsonify
 from functools import wraps
 from config import settings
 
-VALID_ROLES = {'super_admin', 'rental_company', 'agency', 'customer'}
+VALID_ROLES = {'super_admin', 'rental_company', 'agency_admin', 'passenger'}
 
 
 def _decode_token():
