@@ -47,7 +47,7 @@
         }
       }
     },
-    "/api/signup": {
+    "/api/v1/signup": {
       "post": {
         "tags": ["Auth"],
         "summary": "Register a new user",
@@ -82,7 +82,7 @@
         }
       }
     },
-    "/api/login": {
+    "/api/v1/login": {
       "post": {
         "tags": ["Auth"],
         "summary": "Login and receive a JWT token",
@@ -114,7 +114,7 @@
         }
       }
     },
-    "/api/forgot-password": {
+    "/api/v1/forgot-password": {
       "post": {
         "tags": ["Auth"],
         "summary": "Request a password reset token",
@@ -145,7 +145,7 @@
         }
       }
     },
-    "/api/reset-password": {
+    "/api/v1/reset-password": {
       "post": {
         "tags": ["Auth"],
         "summary": "Reset password using a reset token",
@@ -177,7 +177,7 @@
         }
       }
     },
-    "/api/profile": {
+    "/api/v1/profile": {
       "get": {
         "tags": ["Profile"],
         "summary": "Get current user profile",

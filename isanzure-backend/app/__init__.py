@@ -2,7 +2,7 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_swagger_ui import get_swaggerui_blueprint
 from config import settings
-from app.routes.auth_routes import auth_bp
+from app.routes.v1 import v1_bp
 
 SWAGGER_URL = '/api/docs'
 SWAGGER_JSON_URL = '/static/swagger.json'
@@ -25,7 +25,7 @@ def create_app():
     swaggerui_bp = get_swaggerui_blueprint(SWAGGER_URL, SWAGGER_JSON_URL)
     app.register_blueprint(swaggerui_bp)
 
-    # Routes
-    app.register_blueprint(auth_bp)
+    # Versioned Routes
+    app.register_blueprint(v1_bp)
 
     return app

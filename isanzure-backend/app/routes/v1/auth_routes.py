@@ -9,7 +9,7 @@ from app.utils.auth_utils import token_required, VALID_ROLES
 auth_bp = Blueprint('auth', __name__)
 
 
-@auth_bp.route('/api/signup', methods=['POST'])
+@auth_bp.route('/signup', methods=['POST'])
 def signup():
     data = request.json or {}
     missing = [f for f in ('name', 'email', 'phone', 'password') if not data.get(f)]
@@ -26,7 +26,7 @@ def signup():
     return jsonify({"user_id": str(user_id), "role": role, "token": token}), 201
 
 
-@auth_bp.route('/api/login', methods=['POST'])
+@auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.json or {}
     missing = [f for f in ('email', 'password') if not data.get(f)]
@@ -42,7 +42,7 @@ def login():
     return jsonify({"error": "Invalid credentials"}), 401
 
 
-@auth_bp.route('/api/forgot-password', methods=['POST'])
+@auth_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
     data = request.json or {}
     if not data.get('email'):
@@ -59,7 +59,7 @@ def forgot_password():
     return jsonify({"message": "Password reset token generated.", "reset_token": token}), 200
 
 
-@auth_bp.route('/api/reset-password', methods=['POST'])
+@auth_bp.route('/reset-password', methods=['POST'])
 def reset_password():
     data = request.json or {}
     missing = [f for f in ('reset_token', 'new_password') if not data.get(f)]
@@ -75,7 +75,7 @@ def reset_password():
     return jsonify({"message": "Password reset successful."}), 200
 
 
-@auth_bp.route('/api/profile', methods=['GET'])
+@auth_bp.route('/profile', methods=['GET'])
 @token_required
 def get_profile(current_user_id):
     user = get_user_by_id(current_user_id)
@@ -93,7 +93,7 @@ def get_profile(current_user_id):
     }), 200
 
 
-@auth_bp.route('/api/profile', methods=['PUT'])
+@auth_bp.route('/profile', methods=['PUT'])
 @token_required
 def update_profile_route(current_user_id):
     data = request.json or {}
