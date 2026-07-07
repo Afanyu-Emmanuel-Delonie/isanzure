@@ -27,6 +27,77 @@
         "type": "string",
         "enum": ["super_admin", "rental_company", "agency", "customer"],
         "default": "customer"
+      },
+      "Agency": {
+        "type": "object",
+        "properties": {
+          "id":            { "type": "string", "format": "uuid" },
+          "name":          { "type": "string" },
+          "contact_email": { "type": "string" },
+          "owner_id":      { "type": "string", "format": "uuid" },
+          "created_at":    { "type": "string", "format": "date-time" }
+        }
+      },
+      "Bus": {
+        "type": "object",
+        "properties": {
+          "id":             { "type": "string", "format": "uuid" },
+          "plate_number":   { "type": "string" },
+          "capacity":       { "type": "integer" },
+          "max_passengers": { "type": "integer" },
+          "status":         { "type": "string" },
+          "agency_id":      { "type": "string", "format": "uuid" }
+        }
+      },
+      "Review": {
+        "type": "object",
+        "properties": {
+          "id":         { "type": "string", "format": "uuid" },
+          "rating":     { "type": "integer", "minimum": 1, "maximum": 5 },
+          "comment":    { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "reviewer":   { "type": "string" }
+        }
+      },
+      "Route": {
+        "type": "object",
+        "properties": {
+          "id":          { "type": "string", "format": "uuid" },
+          "origin":      { "type": "string" },
+          "destination": { "type": "string" },
+          "price":       { "type": "number" }
+        }
+      },
+      "Schedule": {
+        "type": "object",
+        "properties": {
+          "id":             { "type": "string", "format": "uuid" },
+          "departure_time": { "type": "string", "format": "date-time" },
+          "created_at":     { "type": "string", "format": "date-time" },
+          "origin":         { "type": "string" },
+          "destination":    { "type": "string" },
+          "price":          { "type": "number" },
+          "plate_number":   { "type": "string" },
+          "capacity":       { "type": "integer" },
+          "agency_id":      { "type": "string", "format": "uuid" },
+          "agency_name":    { "type": "string" }
+        }
+      },
+      "Booking": {
+        "type": "object",
+        "properties": {
+          "id":             { "type": "string", "format": "uuid" },
+          "seat_number":    { "type": "integer" },
+          "created_at":     { "type": "string", "format": "date-time" },
+          "user_id":        { "type": "string", "format": "uuid" },
+          "schedule_id":    { "type": "string", "format": "uuid" },
+          "departure_time": { "type": "string", "format": "date-time" },
+          "origin":         { "type": "string" },
+          "destination":    { "type": "string" },
+          "price":          { "type": "number" },
+          "plate_number":   { "type": "string" },
+          "agency_name":    { "type": "string" }
+        }
       }
     }
   },
@@ -47,6 +118,7 @@
         }
       }
     },
+
     "/api/v1/signup": {
       "post": {
         "tags": ["Auth"],
@@ -78,10 +150,11 @@
               }
             }
           },
-          "400": { "description": "Missing fields", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "400": { "description": "Missing or invalid fields", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
         }
       }
     },
+
     "/api/v1/login": {
       "post": {
         "tags": ["Auth"],
@@ -114,6 +187,7 @@
         }
       }
     },
+
     "/api/v1/forgot-password": {
       "post": {
         "tags": ["Auth"],
@@ -145,6 +219,7 @@
         }
       }
     },
+
     "/api/v1/reset-password": {
       "post": {
         "tags": ["Auth"],
@@ -177,6 +252,7 @@
         }
       }
     },
+
     "/api/v1/profile": {
       "get": {
         "tags": ["Profile"],
@@ -193,6 +269,7 @@
                   "email": "john@example.rw",
                   "phone": "+250788123456",
                   "role": "customer",
+                  "agency_id": null,
                   "created_at": "2026-07-07T00:00:00"
                 }
               }
@@ -232,6 +309,612 @@
           },
           "400": { "description": "Missing fields" },
           "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+
+    "/api/v1/agencies": {
+      "post": {
+        "tags": ["Agencies"],
+        "summary": "Create a new agency",
+        "description": "Requires `super_admin` role.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "contact_email"],
+                "properties": {
+                  "name":          { "type": "string", "example": "Volcano Express" },
+                  "contact_email": { "type": "string", "example": "info@volcano.rw" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Agency created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Agency" } } }
+          },
+          "400": { "description": "Missing fields", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+
+    "/api/v1/agencies/mine": {
+      "get": {
+        "tags": ["Agencies"],
+        "summary": "Get the agency owned by the current user",
+        "description": "Requires `agency_admin` role.",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Agency details",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Agency" } } }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "No agency found for this user" }
+        }
+      }
+    },
+
+    "/api/v1/agencies/{agency_id}": {
+      "get": {
+        "tags": ["Agencies"],
+        "summary": "Get agency by ID",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "agency_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agency details",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Agency" } } }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Agency not found" }
+        }
+      }
+    },
+
+    "/api/v1/agencies/{agency_id}/members": {
+      "get": {
+        "tags": ["Agencies"],
+        "summary": "List members of an agency",
+        "description": "Requires `super_admin` or `agency_admin` role. Agency admins can only access their own agency.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "agency_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of members",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id":          { "type": "string", "format": "uuid" },
+                      "name":        { "type": "string" },
+                      "email":       { "type": "string" },
+                      "phone":       { "type": "string" },
+                      "role":        { "type": "string" },
+                      "agency_role": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Agency not found" }
+        }
+      }
+    },
+
+    "/api/v1/agencies/{agency_id}/buses": {
+      "post": {
+        "tags": ["Buses"],
+        "summary": "Add a bus to an agency",
+        "description": "Requires `super_admin` or `agency_admin` role.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "agency_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["plate_number", "capacity"],
+                "properties": {
+                  "plate_number": { "type": "string", "example": "RAB 123 A" },
+                  "capacity":     { "type": "integer", "example": 49 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Bus created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Bus" } } }
+          },
+          "400": { "description": "Missing or invalid fields", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Agency not found" }
+        }
+      },
+      "get": {
+        "tags": ["Buses"],
+        "summary": "List buses for an agency",
+        "description": "Requires `super_admin` or `agency_admin` role.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "agency_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of buses",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Bus" } }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Agency not found" }
+        }
+      }
+    },
+
+    "/api/v1/routes": {
+      "post": {
+        "tags": ["Routes"],
+        "summary": "Create a new route",
+        "description": "Requires `super_admin` or `agency_admin` role.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["origin", "destination", "price"],
+                "properties": {
+                  "origin":      { "type": "string", "example": "Kigali" },
+                  "destination": { "type": "string", "example": "Musanze" },
+                  "price":       { "type": "number", "example": 2500 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Route created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Route" } } }
+          },
+          "400": { "description": "Missing or invalid fields", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      },
+      "get": {
+        "tags": ["Routes"],
+        "summary": "List all routes",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of routes",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Route" } }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+
+    "/api/v1/routes/{route_id}": {
+      "get": {
+        "tags": ["Routes"],
+        "summary": "Get a route by ID",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "route_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Route details",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Route" } } }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Route not found" }
+        }
+      }
+    },
+
+    "/api/v1/schedules": {
+      "post": {
+        "tags": ["Schedules"],
+        "summary": "Create a schedule",
+        "description": "Assigns a bus to a route with a departure time. Requires `super_admin` or `agency_admin` role.",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["bus_id", "route_id", "departure_time"],
+                "properties": {
+                  "bus_id":         { "type": "string", "format": "uuid" },
+                  "route_id":       { "type": "string", "format": "uuid" },
+                  "departure_time": { "type": "string", "format": "date-time", "example": "2026-07-10T08:00:00Z" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Schedule created",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Schedule" } } }
+          },
+          "400": { "description": "Missing fields", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+
+    "/api/v1/schedules/{schedule_id}": {
+      "get": {
+        "tags": ["Schedules"],
+        "summary": "Get a schedule by ID",
+        "description": "Returns schedule details including booked seats and available seats.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "schedule_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedule details with seat availability",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "uuid",
+                  "departure_time": "2026-07-10T08:00:00",
+                  "origin": "Kigali",
+                  "destination": "Musanze",
+                  "price": 2500,
+                  "plate_number": "RAB 123 A",
+                  "capacity": 49,
+                  "agency_name": "Volcano Express",
+                  "booked_seats": [1, 5, 12],
+                  "available_seats": 46
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Schedule not found" }
+        }
+      }
+    },
+
+    "/api/v1/routes/{route_id}/schedules": {
+      "get": {
+        "tags": ["Schedules"],
+        "summary": "List schedules for a route",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "route_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of schedules",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Schedule" } }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+
+    "/api/v1/agencies/{agency_id}/schedules": {
+      "get": {
+        "tags": ["Schedules"],
+        "summary": "List schedules for an agency",
+        "description": "Requires `super_admin` or `agency_admin` role. Agency admins can only access their own agency.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "agency_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of schedules",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Schedule" } }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+
+    "/api/v1/schedules/{schedule_id}/bookings": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "List all bookings for a schedule",
+        "description": "Requires `super_admin` or `agency_admin` role. Agency admins can only access their own schedules.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "schedule_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of bookings with passenger info",
+            "content": {
+              "application/json": {
+                "example": [
+                  { "id": "uuid", "seat_number": 5, "created_at": "2026-07-07T00:00:00", "user_id": "uuid", "name": "John Doe", "email": "john@example.rw", "phone": "+250788123456" }
+                ]
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Schedule not found" }
+        }
+      }
+    },
+
+    "/api/v1/bookings": {
+      "post": {
+        "tags": ["Bookings"],
+        "summary": "Book a seat on a schedule",
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["schedule_id", "seat_number"],
+                "properties": {
+                  "schedule_id":  { "type": "string", "format": "uuid" },
+                  "seat_number":  { "type": "integer", "example": 7 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Booking confirmed",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Booking" } } }
+          },
+          "400": { "description": "Missing or invalid fields", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Unauthorized" },
+          "409": { "description": "Seat already booked", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+
+    "/api/v1/bookings/me": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "Get all bookings for the current user",
+        "security": [{ "BearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "List of user bookings",
+            "content": {
+              "application/json": {
+                "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Booking" } }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+
+    "/api/v1/bookings/{booking_id}": {
+      "get": {
+        "tags": ["Bookings"],
+        "summary": "Get a booking by ID",
+        "description": "Passengers can only access their own bookings. Admins can access any.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "booking_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Booking details",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Booking" } } }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Booking not found" }
+        }
+      },
+      "delete": {
+        "tags": ["Bookings"],
+        "summary": "Cancel a booking",
+        "description": "Only the booking owner can cancel their booking.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "booking_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Booking cancelled",
+            "content": { "application/json": { "example": { "message": "Booking cancelled successfully." } } }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Booking not found" }
+        }
+      }
+    },
+
+    "/api/v1/bookings/{booking_id}/ticket": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "Download PDF ticket for a booking",
+        "description": "Returns a PDF file containing booking details and a scannable QR code. Passengers can only download their own ticket.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "booking_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "PDF ticket file",
+            "content": {
+              "application/pdf": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Booking not found" }
+        }
+      }
+    },
+
+    "/api/v1/bookings/{booking_id}/verify": {
+      "get": {
+        "tags": ["Tickets"],
+        "summary": "Verify a ticket QR code",
+        "description": "Validates the HMAC-signed token from the QR code and returns booking details. Requires `super_admin` or `agency_admin` role.",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "booking_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+          { "name": "token", "in": "query", "required": true, "schema": { "type": "string" }, "description": "HMAC-signed token decoded from the QR code" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ticket is valid",
+            "content": {
+              "application/json": {
+                "example": {
+                  "valid": true,
+                  "booking_id": "uuid",
+                  "seat_number": 7,
+                  "departure_time": "2026-07-10T08:00:00",
+                  "origin": "Kigali",
+                  "destination": "Musanze",
+                  "plate_number": "RAB 123 A",
+                  "agency_name": "Volcano Express",
+                  "user_id": "uuid"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or tampered ticket",
+            "content": { "application/json": { "example": { "valid": false, "error": "Invalid or tampered ticket." } } }
+          },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" },
+          "404": { "description": "Booking not found" }
+        }
+      }
+    },
+
+    "/api/v1/agencies/{agency_id}/reviews": {
+      "post": {
+        "tags": ["Reviews"],
+        "summary": "Post a review for an agency",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "agency_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["rating"],
+                "properties": {
+                  "rating":     { "type": "integer", "minimum": 1, "maximum": 5, "example": 4 },
+                  "comment":    { "type": "string", "example": "Great service!" },
+                  "booking_id": { "type": "string", "format": "uuid" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Review created",
+            "content": {
+              "application/json": {
+                "example": {
+                  "id": "uuid",
+                  "agency_id": "uuid",
+                  "user_id": "uuid",
+                  "booking_id": null,
+                  "rating": 4,
+                  "comment": "Great service!",
+                  "created_at": "2026-07-07T00:00:00"
+                }
+              }
+            }
+          },
+          "400": { "description": "Missing or invalid fields", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Agency not found" }
+        }
+      },
+      "get": {
+        "tags": ["Reviews"],
+        "summary": "Get reviews and rating summary for an agency",
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          { "name": "agency_id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reviews and summary",
+            "content": {
+              "application/json": {
+                "example": {
+                  "summary": { "total_reviews": 10, "average_rating": 4.2 },
+                  "reviews": [
+                    { "id": "uuid", "rating": 5, "comment": "Excellent!", "created_at": "2026-07-07T00:00:00", "reviewer": "John Doe" }
+                  ]
+                }
+              }
+            }
+          },
+          "401": { "description": "Unauthorized" },
+          "404": { "description": "Agency not found" }
         }
       }
     }

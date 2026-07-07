@@ -82,14 +82,15 @@ def get_profile(current_user_id):
     if not user:
         return jsonify({"error": "User not found."}), 404
 
-    # user: (id, name, email, phone, role, created_at)
+    # user: (id, name, email, phone_number, role, agency_id, created_at)
     return jsonify({
         "id": str(user[0]),
         "name": user[1],
         "email": user[2],
         "phone": user[3],
         "role": user[4],
-        "created_at": user[5].isoformat()
+        "agency_id": str(user[5]) if user[5] else None,
+        "created_at": user[6].isoformat()
     }), 200
 
 

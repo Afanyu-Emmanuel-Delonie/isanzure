@@ -64,7 +64,7 @@ def update_profile(user_id, name, phone):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE users SET name = %s, phone = %s WHERE id = %s RETURNING id, name, email, phone, role;",
+                "UPDATE users SET name = %s, phone_number = %s WHERE id = %s RETURNING id, name, email, phone_number, role;",
                 (name, phone, user_id)
             )
             conn.commit()

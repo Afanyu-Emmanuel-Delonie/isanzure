@@ -63,10 +63,15 @@ def create_bus(plate_number, capacity, agency_id):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO buses (plate_number, capacity, agency_id) VALUES (%s, %s, %s) RETURNING id;",
+                """
+                INSERT INTO buses (plate_number, capacity, agency_id)
+                VALUES (%s, %s, %s)
+                RETURNING id, plate_number, capacity, status, agency_id;
+                """,
                 (plate_number, capacity, agency_id)
             )
-            return cur.fetchone()[0]
+            conn.commit()
+            return cur.fetchone()
 
 def get_buses_by_agency(agency_id):
     with get_db_connection() as conn:
