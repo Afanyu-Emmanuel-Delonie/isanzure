@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_theme.dart';
 import '../../models/mock-trip-model.dart';
+import '../../viewmodels/booking_details_viewmodel.dart';
 import '../../views/bookings/bookings_details.dart';
 
 const int kServiceFee = 200;
