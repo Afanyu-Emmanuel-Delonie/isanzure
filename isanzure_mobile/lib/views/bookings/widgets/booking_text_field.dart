@@ -42,7 +42,7 @@ class BookingTextField extends StatelessWidget {
         hintText: hint,
         hintStyle: GoogleFonts.inter(
             fontSize: 13, color: AppColors.bodyTextSecondary),
-        prefixIcon: Icon(icon, size: 18, color: AppColors.primary),
+        prefixIcon: Icon(icon, size: 18, color: Colors.black54),
         filled: true,
         fillColor: AppColors.surface,
         counterText: '',
@@ -83,7 +83,8 @@ class FieldLabel extends StatelessWidget {
     label,
     style: GoogleFonts.sora(
         fontSize: 13,
-        fontWeight: FontWeight.w600,
-        color: AppColors.bodyText),
+        fontWeight: FontWeight.w500,
+        color: Colors.black54
+    ),
   );
 }
