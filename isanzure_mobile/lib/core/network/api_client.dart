@@ -7,7 +7,7 @@ class ApiClient {
 
   ApiClient(this._storage) {
     _dio = Dio(BaseOptions(
-      baseUrl: 'http://10.0.2.2:5000/api',
+      baseUrl: 'http://10.0.2.2:5000/api/v1',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
     ));
@@ -34,6 +34,9 @@ class ApiClient {
 
   Future<Response> post(String path, dynamic data) =>
       _dio.post(path, data: data);
+
+  Future<Response> put(String path, dynamic data) =>
+      _dio.put(path, data: data);
 
   Future<Response> get(String path) => _dio.get(path);
 }

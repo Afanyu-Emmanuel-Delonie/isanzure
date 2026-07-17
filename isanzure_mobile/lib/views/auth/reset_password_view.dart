@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:isanzure_mobile/views/auth/widgets/app_toast.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/constants/app_theme.dart';
+import '../../viewmodels/auth_viewmodel.dart';
 import '../bookings/widgets/booking_text_field.dart';
 import 'login_view.dart';
 import 'widgets/auth_widgets.dart';
 
 class ResetPasswordView extends StatefulWidget {
-  const ResetPasswordView({super.key, required this.email});
+  const ResetPasswordView({super.key, required this.email, this.resetToken});
   final String email;
+  final String? resetToken;
 
   @override
   State<ResetPasswordView> createState() => _ResetPasswordViewState();
@@ -20,7 +24,6 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
   final _confirmCtrl = TextEditingController();
   bool _obscurePass = true;
   bool _obscureConfirm = true;
-  bool _loading = false;
   bool _done = false;
 
   @override
@@ -41,15 +44,32 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
     return score;
   }
 
+  String? _passValidator(String? v) {
+    if (v == null || v.isEmpty) return 'Password is required';
+    if (v.length < 8) return 'At least 8 characters';
+    return null;
+  }
+
+  String? _confirmValidator(String? v) {
+    if (v == null || v.isEmpty) return 'Please confirm your password';
+    if (v != _passCtrl.text) return 'Passwords do not match';
+    return null;
+  }
+
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 1200));
+    if (!_formKey.currentState!.validate()) {
+      AppToast.error(context, 'Please fix the highlighted fields');
+      return;
+    }
+    final vm = context.read<AuthViewModel>();
+    final token = widget.resetToken ?? '';
+    final success = await vm.resetPassword(token, _passCtrl.text.trim());
     if (!mounted) return;
-    setState(() {
-      _loading = false;
-      _done = true;
-    });
+    if (success) {
+      setState(() => _done = true);
+    } else {
+      AppToast.error(context, vm.errorMessage ?? 'Could not reset password');
+    }
   }
 
   @override
@@ -57,9 +77,10 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
-          child: Column(
+        child: Consumer<AuthViewModel>(
+          builder: (context, vm, _) => SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Back button (hidden on success) ──────────────────────────
@@ -78,7 +99,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                         size: 16, color: AppColors.primary),
                   ),
                 ),
-              SizedBox(height: _done ? 40 : 40),
+              const SizedBox(height: 40),
 
               // ── Icon + title ─────────────────────────────────────────────
               Center(
@@ -144,11 +165,8 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                         hint: 'Min. 8 characters',
                         onToggle: () =>
                             setState(() => _obscurePass = !_obscurePass),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Password is required';
-                          if (v.length < 8) return 'At least 8 characters';
-                          return null;
-                        },
+                        validator: _passValidator,
+                        externalTrigger: _confirmCtrl,
                       ),
                       const SizedBox(height: 10),
                       ValueListenableBuilder(
@@ -165,16 +183,13 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                         hint: 'Re-enter your password',
                         onToggle: () =>
                             setState(() => _obscureConfirm = !_obscureConfirm),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Please confirm your password';
-                          if (v != _passCtrl.text) return 'Passwords do not match';
-                          return null;
-                        },
+                        validator: _confirmValidator,
+                        externalTrigger: _passCtrl,
                       ),
                       const SizedBox(height: 32),
                       AuthPrimaryButton(
                         label: 'Update Password',
-                        loading: _loading,
+                        loading: vm.isLoading,
                         onPressed: _submit,
                       ),
                     ],
@@ -182,6 +197,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                 ),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -200,7 +216,7 @@ class _SuccessBody extends StatelessWidget {
           child: ElevatedButton(
             onPressed: () => Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const LoginView()),
-              (_) => false,
+                  (_) => false,
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,

@@ -31,14 +31,14 @@ class AuthPrimaryButton extends StatelessWidget {
         ),
         child: loading
             ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2.5, color: Colors.white),
-              )
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(
+              strokeWidth: 2.5, color: Colors.white),
+        )
             : Text(label,
-                style: GoogleFonts.sora(
-                    fontSize: 15, fontWeight: FontWeight.w700)),
+            style: GoogleFonts.sora(
+                fontSize: 15, fontWeight: FontWeight.w700)),
       ),
     );
   }
@@ -119,7 +119,6 @@ class _BrandIcon extends StatelessWidget {
     if (brand == SocialBrand.apple) {
       return const Icon(Icons.apple, size: 22, color: Colors.black);
     }
-    // Google — four-colour G painted manually
     return SizedBox(
       width: 22,
       height: 22,
@@ -135,19 +134,15 @@ class _GooglePainter extends CustomPainter {
     final cy = size.height / 2;
     final r = size.width / 2;
 
-    // Draw full circle background (white)
-    canvas.drawCircle(
-        Offset(cx, cy), r, Paint()..color = Colors.white);
+    canvas.drawCircle(Offset(cx, cy), r, Paint()..color = Colors.white);
+    canvas.clipPath(
+        Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r)));
 
-    // Clip to circle
-    canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset(cx, cy), radius: r)));
-
-    // Quadrant colours
     final paints = [
-      Paint()..color = const Color(0xFF4285F4), // blue  — top-right
-      Paint()..color = const Color(0xFF34A853), // green — bottom-right
-      Paint()..color = const Color(0xFFFBBC05), // yellow — bottom-left
-      Paint()..color = const Color(0xFFEA4335), // red   — top-left
+      Paint()..color = const Color(0xFF4285F4),
+      Paint()..color = const Color(0xFF34A853),
+      Paint()..color = const Color(0xFFFBBC05),
+      Paint()..color = const Color(0xFFEA4335),
     ];
     final angles = [0.0, 90.0, 180.0, 270.0];
     for (int i = 0; i < 4; i++) {
@@ -162,22 +157,18 @@ class _GooglePainter extends CustomPainter {
       );
     }
 
-    // White inner circle (donut)
     canvas.drawCircle(
         Offset(cx, cy), r * 0.58, Paint()..color = Colors.white);
 
-    // Blue right bar (the horizontal bar of the G)
     final barPaint = Paint()..color = const Color(0xFF4285F4);
     canvas.drawRect(
       Rect.fromLTWH(cx, cy - r * 0.18, r * 0.95, r * 0.36),
       barPaint,
     );
 
-    // Re-clip inner white ring gap
     canvas.drawCircle(
         Offset(cx, cy), r * 0.58, Paint()..color = Colors.white);
 
-    // Blue arc fill for right side of G
     canvas.drawArc(
       Rect.fromCircle(center: Offset(cx, cy), radius: r * 0.58),
       -0.52,
@@ -224,7 +215,139 @@ class AuthFooter extends StatelessWidget {
   }
 }
 
-class AuthPasswordField extends StatelessWidget {
+/// ── Shared live-validation visuals ─────────────────────────────────────
+/// Both [AuthTextField] and [AuthPasswordField] share the same "touched"
+/// state machine: a field stays neutral until the user has typed in it or
+/// left it, then shows a green check / red error + inline message as they
+/// keep typing — instead of waiting for form submission to reveal problems.
+enum _FieldStatus { idle, valid, invalid }
+
+InputBorder _borderFor(Color color, {double width = 1.2}) =>
+    OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: color, width: width),
+    );
+
+/// A text field with real-time validation feedback: neutral until
+/// touched, then a green check or red error icon + message as the user
+/// types, re-evaluated on every keystroke and on blur.
+class AuthTextField extends StatefulWidget {
+  const AuthTextField({
+    super.key,
+    required this.controller,
+    required this.hint,
+    required this.icon,
+    required this.validator,
+    this.keyboardType,
+    this.textCapitalization = TextCapitalization.none,
+    this.externalTrigger,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final IconData icon;
+  final String? Function(String?) validator;
+  final TextInputType? keyboardType;
+  final TextCapitalization textCapitalization;
+
+  /// Optional Listenable (e.g. another field's controller) that should
+  /// force this field to re-validate — useful for "confirm password"
+  /// style fields whose validity depends on a sibling field.
+  final Listenable? externalTrigger;
+
+  @override
+  State<AuthTextField> createState() => _AuthTextFieldState();
+}
+
+class _AuthTextFieldState extends State<AuthTextField> {
+  final _focusNode = FocusNode();
+  bool _touched = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onSignal);
+    widget.externalTrigger?.addListener(_onSignal);
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus && widget.controller.text.isNotEmpty) {
+        setState(() => _touched = true);
+      }
+    });
+  }
+
+  void _onSignal() {
+    if (widget.controller.text.isNotEmpty) _touched = true;
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onSignal);
+    widget.externalTrigger?.removeListener(_onSignal);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final error = _touched ? widget.validator(widget.controller.text) : null;
+    final isValid =
+        _touched && widget.controller.text.isNotEmpty && error == null;
+    final status = !_touched
+        ? _FieldStatus.idle
+        : (error != null ? _FieldStatus.invalid : _FieldStatus.valid);
+
+    final borderColor = switch (status) {
+      _FieldStatus.valid => const Color(0xFF16A34A),
+      _FieldStatus.invalid => Colors.redAccent,
+      _FieldStatus.idle => const Color(0xFFE5E7F0),
+    };
+
+    return TextFormField(
+      controller: widget.controller,
+      focusNode: _focusNode,
+      keyboardType: widget.keyboardType,
+      textCapitalization: widget.textCapitalization,
+      validator: widget.validator,
+      autovalidateMode: AutovalidateMode.disabled,
+      style: GoogleFonts.inter(fontSize: 14, color: AppColors.bodyText),
+      decoration: InputDecoration(
+        hintText: widget.hint,
+        hintStyle:
+        GoogleFonts.inter(fontSize: 13, color: AppColors.bodyTextSecondary),
+        prefixIcon: Icon(widget.icon, size: 18, color: Colors.black54),
+        suffixIcon: status == _FieldStatus.idle
+            ? null
+            : AnimatedSwitcher(
+          duration: const Duration(milliseconds: 150),
+          child: Icon(
+            isValid ? Icons.check_circle_rounded : Icons.error_rounded,
+            key: ValueKey(isValid),
+            size: 20,
+            color: isValid ? const Color(0xFF16A34A) : Colors.redAccent,
+          ),
+        ),
+        errorText: error,
+        filled: true,
+        fillColor: AppColors.surface,
+        errorStyle: GoogleFonts.inter(fontSize: 11.5, color: Colors.redAccent),
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: _borderFor(borderColor),
+        enabledBorder: _borderFor(borderColor),
+        focusedBorder: _borderFor(
+            status == _FieldStatus.invalid ? Colors.redAccent : AppColors.primary,
+            width: 1.5),
+        errorBorder: _borderFor(Colors.redAccent),
+        focusedErrorBorder: _borderFor(Colors.redAccent, width: 1.5),
+      ),
+    );
+  }
+}
+
+/// Password field with the same live-validation treatment as
+/// [AuthTextField], plus the visibility toggle.
+class AuthPasswordField extends StatefulWidget {
   const AuthPasswordField({
     super.key,
     required this.controller,
@@ -232,6 +355,7 @@ class AuthPasswordField extends StatelessWidget {
     required this.onToggle,
     this.validator,
     this.hint = 'Enter your password',
+    this.externalTrigger,
   });
   final TextEditingController controller;
   final bool obscure;
@@ -239,56 +363,109 @@ class AuthPasswordField extends StatelessWidget {
   final String? Function(String?)? validator;
   final String hint;
 
+  /// See [AuthTextField.externalTrigger].
+  final Listenable? externalTrigger;
+
+  @override
+  State<AuthPasswordField> createState() => _AuthPasswordFieldState();
+}
+
+class _AuthPasswordFieldState extends State<AuthPasswordField> {
+  final _focusNode = FocusNode();
+  bool _touched = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onSignal);
+    widget.externalTrigger?.addListener(_onSignal);
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus && widget.controller.text.isNotEmpty) {
+        setState(() => _touched = true);
+      }
+    });
+  }
+
+  void _onSignal() {
+    if (widget.controller.text.isNotEmpty) _touched = true;
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onSignal);
+    widget.externalTrigger?.removeListener(_onSignal);
+    _focusNode.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final error =
+    _touched && widget.validator != null ? widget.validator!(widget.controller.text) : null;
+    final isValid =
+        _touched && widget.controller.text.isNotEmpty && error == null;
+    final status = !_touched
+        ? _FieldStatus.idle
+        : (error != null ? _FieldStatus.invalid : _FieldStatus.valid);
+
+    final borderColor = switch (status) {
+      _FieldStatus.valid => const Color(0xFF16A34A),
+      _FieldStatus.invalid => Colors.redAccent,
+      _FieldStatus.idle => const Color(0xFFE5E7F0),
+    };
+
     return TextFormField(
-      controller: controller,
-      obscureText: obscure,
-      validator: validator,
+      controller: widget.controller,
+      focusNode: _focusNode,
+      obscureText: widget.obscure,
+      validator: widget.validator,
+      autovalidateMode: AutovalidateMode.disabled,
       style: GoogleFonts.inter(fontSize: 14, color: AppColors.bodyText),
       decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: GoogleFonts.inter(
-            fontSize: 13, color: AppColors.bodyTextSecondary),
+        hintText: widget.hint,
+        hintStyle:
+        GoogleFonts.inter(fontSize: 13, color: AppColors.bodyTextSecondary),
         prefixIcon: const Icon(Icons.lock_outline_rounded,
             size: 18, color: Colors.black54),
-        suffixIcon: GestureDetector(
-          onTap: onToggle,
-          child: Icon(
-            obscure
-                ? Icons.visibility_off_outlined
-                : Icons.visibility_outlined,
-            size: 18,
-            color: AppColors.bodyTextSecondary,
-          ),
+        suffixIcon: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (status != _FieldStatus.idle)
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: Icon(
+                  isValid ? Icons.check_circle_rounded : Icons.error_rounded,
+                  size: 20,
+                  color: isValid ? const Color(0xFF16A34A) : Colors.redAccent,
+                ),
+              ),
+            GestureDetector(
+              onTap: widget.onToggle,
+              child: Icon(
+                widget.obscure
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+                size: 18,
+                color: AppColors.bodyTextSecondary,
+              ),
+            ),
+            const SizedBox(width: 4),
+          ],
         ),
+        errorText: error,
         filled: true,
         fillColor: AppColors.surface,
-        errorStyle: GoogleFonts.inter(fontSize: 11, color: Colors.redAccent),
+        errorStyle: GoogleFonts.inter(fontSize: 11.5, color: Colors.redAccent),
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE5E7F0)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE5E7F0)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: AppColors.primary, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.redAccent, width: 1),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide:
-              const BorderSide(color: Colors.redAccent, width: 1.5),
-        ),
+        const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: _borderFor(borderColor),
+        enabledBorder: _borderFor(borderColor),
+        focusedBorder: _borderFor(
+            status == _FieldStatus.invalid ? Colors.redAccent : AppColors.primary,
+            width: 1.5),
+        errorBorder: _borderFor(Colors.redAccent),
+        focusedErrorBorder: _borderFor(Colors.redAccent, width: 1.5),
       ),
     );
   }

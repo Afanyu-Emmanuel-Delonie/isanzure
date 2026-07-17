@@ -1,14 +1,17 @@
 from flask import Blueprint, request, jsonify
-from app.services.auth_service import AuthService
+from app.services.auth_service import (
+    AuthService,
+    hash_password,
+    check_password,
+    generate_jwt,
+    generate_reset_token,
+    send_otp_email
+)
 from app.repositories.user_repository import (
-    get_user_by_email, get_user_by_id,
+    create_user, get_user_by_email, get_user_by_id,
     get_user_by_reset_token, update_reset_token, update_password, update_profile
 )
-from app.utils.auth_utils import (
-    hash_password, check_password, generate_jwt,
-    generate_reset_token, token_required, VALID_ROLES
-)
-from app.utils.mailer import send_otp_email, send_reset_email
+from app.utils.auth_utils import token_required, VALID_ROLES
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -29,32 +32,6 @@ def signup():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-@auth_bp.route('/verify-otp', methods=['POST'])
-def verify_otp():
-    data = request.json
-    required_fields = ('email', 'otp', 'name', 'password', 'phone', 'role')
-    
-    # Validation
-    if missing := [f for f in required_fields if not data.get(f)]:
-        return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
-
-    try:
-        token = AuthService.verify_signup_otp(
-            email=data['email'],
-            provided_otp=data['otp'],
-            name=data['name'],
-            password=data['password'],
-            phone=data['phone'],
-            role=data['role']
-        )
-        
-        return jsonify({"token": token, "message": "Account created successfully"}), 201
-        
-    except ValueError as e:
-        # This catches "Invalid OTP" or "Expired OTP" errors
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        return jsonify({"error": "An unexpected error occurred"}), 500
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
@@ -63,10 +40,10 @@ def login():
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
 
     user = get_user_by_email(data['email'])
-    if user and check_password(data['password'], user[3]):
-        # user: (id, name, email, password_hash, role)
-        token = generate_jwt(user[0], user[4])
-        return jsonify({"token": token, "role": user[4]}), 200
+    if user and check_password(data['password'], user[2]):
+        # user: (id, email, password_hash, role)
+        token = generate_jwt(user[0], user[3])
+        return jsonify({"token": token, "role": user[3]}), 200
 
     return jsonify({"error": "Invalid credentials"}), 401
 
@@ -79,18 +56,13 @@ def forgot_password():
 
     user = get_user_by_email(data['email'])
     if not user:
-        # Don't reveal whether the email exists
-        return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
+        return jsonify({"message": "If that email exists, a reset token has been sent."}), 200
 
     token, expires_at = generate_reset_token()
     update_reset_token(data['email'], token, expires_at)
 
-    try:
-        send_reset_email(data['email'], token, user[1])
-    except Exception as e:
-        return jsonify({"error": f"Could not send reset email: {str(e)}"}), 500
-
-    return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
+    # TODO: Send token via email. For now return it directly (dev only).
+    return jsonify({"message": "Password reset token generated.", "reset_token": token}), 200
 
 
 @auth_bp.route('/reset-password', methods=['POST'])

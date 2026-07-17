@@ -27,11 +27,13 @@ CREATE TABLE IF NOT EXISTS users (
 
 CREATE TABLE IF NOT EXISTS otp_verifications (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-    otp_code TEXT NOT NULL,
+    email TEXT NOT NULL,
+    otp_hash TEXT NOT NULL,
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_otp_email ON otp_verifications (email);
 
 -- 3. Buses
 CREATE TABLE IF NOT EXISTS buses (

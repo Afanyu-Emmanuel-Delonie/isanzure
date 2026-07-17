@@ -4,6 +4,7 @@ flask-swagger-ui==5.32.8
 # Web Framework & Core
 Flask==3.0.3
 Flask-Cors==4.0.1
+Flask-Mail==0.10.0
 
 # Asynchronous Networking & High Concurrency (For Live Map Tracking Streams)
 gevent==24.11.1

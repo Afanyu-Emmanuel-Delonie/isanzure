@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/constants/app_header.dart';
 import '../../core/constants/app_theme.dart';
+import '../../viewmodels/auth_viewmodel.dart';
+import '../auth/login_view.dart';
 import 'edit_profile_view.dart';
 
 class ProfileView extends StatefulWidget {
@@ -44,14 +47,18 @@ class _ProfileViewState extends State<ProfileView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      body: SingleChildScrollView(
-        controller: _scrollCtrl,
-        physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics()),
-        child: Column(
-          children: [
+    return Consumer<AuthViewModel>(
+      builder: (context, vm, _) {
+        final user = vm.currentUser;
+        return Scaffold(
+          backgroundColor: AppColors.surface,
+          body: SingleChildScrollView(
+            controller: _scrollCtrl,
+            physics: const BouncingScrollPhysics(
+                parent: AlwaysScrollableScrollPhysics()),
+            child: Column(
+              children:
+              [
             // ── Header with avatar ──────────────────────────────────────
             AppHeader(
               parallax: _parallax,
@@ -84,13 +91,13 @@ class _ProfileViewState extends State<ProfileView> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Jean Pierre Habimana',
+                      Text(user?.name ?? '...',
                           style: GoogleFonts.sora(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: Colors.white)),
                       const SizedBox(height: 3),
-                      Text('<user@email.com>',
+                      Text(user?.email ?? '',
                           style: GoogleFonts.inter(
                               fontSize: 12, color: Colors.white70)),
                     ],
@@ -153,7 +160,7 @@ class _ProfileViewState extends State<ProfileView> {
                       _MenuItem(
                         icon: Icons.phone_outlined,
                         label: 'Phone Number',
-                        trailing: Text('+250 7XX XXX XXX',
+                        trailing: Text(user?.phone ?? '',
                             style: GoogleFonts.inter(
                                 fontSize: 12,
                                 color: AppColors.bodyTextSecondary)),
@@ -212,7 +219,14 @@ class _ProfileViewState extends State<ProfileView> {
 
                     // ── Logout ──────────────────────────────────────────
                     GestureDetector(
-                      onTap: () {},
+                      onTap: () async {
+                        await vm.logout();
+                        if (!context.mounted) return;
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (_) => const LoginView()),
+                          (_) => false,
+                        );
+                      },
                       child: Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -244,6 +258,8 @@ class _ProfileViewState extends State<ProfileView> {
           ],
         ),
       ),
+        );
+      },
     );
   }
 }

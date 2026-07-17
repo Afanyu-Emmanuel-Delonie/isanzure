@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:isanzure_mobile/views/auth/widgets/app_toast.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/constants/app_theme.dart';
+import '../../viewmodels/auth_viewmodel.dart';
 import '../../views/main_shell.dart';
 import '../bookings/widgets/booking_text_field.dart';
 import 'widgets/auth_widgets.dart';
@@ -20,7 +23,6 @@ class _LoginViewState extends State<LoginView> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscure = true;
-  bool _loading = false;
 
   @override
   void dispose() {
@@ -29,20 +31,43 @@ class _LoginViewState extends State<LoginView> {
     super.dispose();
   }
 
+  String? _emailValidator(String? v) {
+    if (v == null || v.trim().isEmpty) return 'Email is required';
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
+      return 'Enter a valid email';
+    }
+    return null;
+  }
+
+  String? _passValidator(String? v) {
+    if (v == null || v.isEmpty) return 'Password is required';
+    if (v.length < 6) return 'At least 6 characters';
+    return null;
+  }
+
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 1200));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (_, __, ___) => const MainShell(),
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
-      ),
+    if (!_formKey.currentState!.validate()) {
+      AppToast.error(context, 'Please fix the highlighted fields');
+      return;
+    }
+    final vm = context.read<AuthViewModel>();
+    final success = await vm.login(
+      _emailCtrl.text.trim(),
+      _passCtrl.text.trim(),
     );
+    if (!mounted) return;
+    if (success) {
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 500),
+          pageBuilder: (_, __, ___) => const MainShell(),
+          transitionsBuilder: (_, anim, __, child) =>
+              FadeTransition(opacity: anim, child: child),
+        ),
+      );
+    } else {
+      AppToast.error(context, vm.errorMessage ?? 'Login failed');
+    }
   }
 
   @override
@@ -50,10 +75,11 @@ class _LoginViewState extends State<LoginView> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
-          child: Column(
-            children: [
+        child: Consumer<AuthViewModel>(
+          builder: (context, vm, _) => SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 60, 24, 40),
+            child: Column(
+              children: [
               // ── Logo + title ─────────────────────────────────────────────
               Container(
                 width: 56,
@@ -88,16 +114,12 @@ class _LoginViewState extends State<LoginView> {
                   children: [
                     const FieldLabel(label: 'Email address'),
                     const SizedBox(height: 8),
-                    BookingTextField(
+                    AuthTextField(
                       controller: _emailCtrl,
                       hint: 'you@example.com',
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Email is required';
-                        if (!v.contains('@')) return 'Enter a valid email';
-                        return null;
-                      },
+                      validator: _emailValidator,
                     ),
                     const SizedBox(height: 20),
                     const FieldLabel(label: 'Password'),
@@ -106,11 +128,7 @@ class _LoginViewState extends State<LoginView> {
                       controller: _passCtrl,
                       obscure: _obscure,
                       onToggle: () => setState(() => _obscure = !_obscure),
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Password is required';
-                        if (v.length < 6) return 'At least 6 characters';
-                        return null;
-                      },
+                      validator: _passValidator,
                     ),
                     const SizedBox(height: 10),
                     Align(
@@ -130,7 +148,7 @@ class _LoginViewState extends State<LoginView> {
                     const SizedBox(height: 32),
                     AuthPrimaryButton(
                       label: 'Sign In',
-                      loading: _loading,
+                      loading: vm.isLoading,
                       onPressed: _submit,
                     ),
                     const SizedBox(height: 24),
@@ -161,6 +179,7 @@ class _LoginViewState extends State<LoginView> {
               ),
             ],
           ),
+        ),
         ),
       ),
     );

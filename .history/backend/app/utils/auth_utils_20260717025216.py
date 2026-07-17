@@ -26,8 +26,8 @@ def generate_jwt(user_id, role: str) -> str:
     return jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
 def generate_reset_token() -> tuple[str, datetime.datetime]:
-    token = str(secrets.randbelow(1000000)).zfill(6)
-    expires_at = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=30)
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.datetime.utcnow() + datetime.timedelta(minutes=30)
     return token, expires_at
 
 # --- Decorators ---
