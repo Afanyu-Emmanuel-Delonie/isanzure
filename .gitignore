@@ -4,3 +4,4 @@ backend/.env
 backend/.env.*
 isanzure_mobile/.env
 *.log
+
