@@ -18,6 +18,13 @@ def get_db_connection():
         db_pool.putconn(conn)
 
 
+def cleanup_expired_tokens():
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM otp_verifications WHERE expires_at < NOW();")
+            cur.execute("UPDATE users SET reset_token = NULL, reset_token_expires = NULL WHERE reset_token_expires < NOW();")
+
+
 def create_user(name, email, phone, password_hash, role='passenger'):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
@@ -28,6 +35,7 @@ def create_user(name, email, phone, password_hash, role='passenger'):
             return cur.fetchone()[0]
 
 def save_otp(email, otp_hash, expires_at):
+    cleanup_expired_tokens()
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -75,6 +83,7 @@ def get_user_by_reset_token(token):
 
 
 def update_reset_token(email, token, expires_at):
+    cleanup_expired_tokens()
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(

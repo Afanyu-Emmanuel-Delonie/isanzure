@@ -117,7 +117,7 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-            builder: (_) => ResetPasswordView(email: widget.email)),
+            builder: (_) => ResetPasswordView(email: widget.email, resetToken: _otp)),
       );
       return;
     }

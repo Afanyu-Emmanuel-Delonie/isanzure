@@ -63,12 +63,15 @@ def login():
         return jsonify({"error": f"Missing fields: {', '.join(missing)}"}), 400
 
     user = get_user_by_email(data['email'])
-    if user and check_password(data['password'], user[3]):
-        # user: (id, name, email, password_hash, role)
-        token = generate_jwt(user[0], user[4])
-        return jsonify({"token": token, "role": user[4]}), 200
+    if not user:
+        return jsonify({"error": "No account found with this email"}), 401
 
-    return jsonify({"error": "Invalid credentials"}), 401
+    if not check_password(data['password'], user[3]):
+        return jsonify({"error": "Incorrect password"}), 401
+
+    # user: (id, name, email, password_hash, role)
+    token = generate_jwt(user[0], user[4])
+    return jsonify({"token": token, "role": user[4]}), 200
 
 
 @auth_bp.route('/forgot-password', methods=['POST'])
@@ -79,8 +82,7 @@ def forgot_password():
 
     user = get_user_by_email(data['email'])
     if not user:
-        # Don't reveal whether the email exists
-        return jsonify({"message": "If that email exists, a reset link has been sent."}), 200
+        return jsonify({"error": "No account found with that email."}), 404
 
     token, expires_at = generate_reset_token()
     update_reset_token(data['email'], token, expires_at)

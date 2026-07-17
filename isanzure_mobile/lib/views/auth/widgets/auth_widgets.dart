@@ -241,6 +241,7 @@ class AuthTextField extends StatefulWidget {
     this.keyboardType,
     this.textCapitalization = TextCapitalization.none,
     this.externalTrigger,
+    this.onChanged,
   });
 
   final TextEditingController controller;
@@ -249,6 +250,7 @@ class AuthTextField extends StatefulWidget {
   final String? Function(String?) validator;
   final TextInputType? keyboardType;
   final TextCapitalization textCapitalization;
+  final ValueChanged<String>? onChanged;
 
   /// Optional Listenable (e.g. another field's controller) that should
   /// force this field to re-validate — useful for "confirm password"
@@ -309,6 +311,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
       keyboardType: widget.keyboardType,
       textCapitalization: widget.textCapitalization,
       validator: widget.validator,
+      onChanged: widget.onChanged,
       autovalidateMode: AutovalidateMode.disabled,
       style: GoogleFonts.inter(fontSize: 14, color: AppColors.bodyText),
       decoration: InputDecoration(
@@ -356,11 +359,13 @@ class AuthPasswordField extends StatefulWidget {
     this.validator,
     this.hint = 'Enter your password',
     this.externalTrigger,
+    this.onChanged,
   });
   final TextEditingController controller;
   final bool obscure;
   final VoidCallback onToggle;
   final String? Function(String?)? validator;
+  final ValueChanged<String>? onChanged;
   final String hint;
 
   /// See [AuthTextField.externalTrigger].
@@ -420,6 +425,7 @@ class _AuthPasswordFieldState extends State<AuthPasswordField> {
       focusNode: _focusNode,
       obscureText: widget.obscure,
       validator: widget.validator,
+      onChanged: widget.onChanged,
       autovalidateMode: AutovalidateMode.disabled,
       style: GoogleFonts.inter(fontSize: 14, color: AppColors.bodyText),
       decoration: InputDecoration(

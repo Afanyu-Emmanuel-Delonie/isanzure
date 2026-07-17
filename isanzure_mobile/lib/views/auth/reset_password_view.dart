@@ -67,6 +67,18 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
     if (!mounted) return;
     if (success) {
       setState(() => _done = true);
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          PageRouteBuilder(
+            transitionDuration: const Duration(milliseconds: 600),
+            pageBuilder: (_, __, ___) => const LoginView(),
+            transitionsBuilder: (_, anim, __, child) =>
+                FadeTransition(opacity: anim, child: child),
+          ),
+          (route) => false,
+        );
+      });
     } else {
       AppToast.error(context, vm.errorMessage ?? 'Could not reset password');
     }
@@ -74,6 +86,41 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
 
   @override
   Widget build(BuildContext context) {
+    if (_done) {
+      return Scaffold(
+        backgroundColor: AppColors.surface,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('🎉', style: TextStyle(fontSize: 80)),
+                const SizedBox(height: 24),
+                Text(
+                  'Password updated!',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.sora(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.primary),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'You can now sign in with your new password',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                      fontSize: 15,
+                      color: AppColors.bodyTextSecondary,
+                      height: 1.6),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
@@ -83,22 +130,21 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
             child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Back button (hidden on success) ──────────────────────────
-              if (!_done)
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE5E7F0)),
-                    ),
-                    child: const Icon(Icons.arrow_back_ios_new_rounded,
-                        size: 16, color: AppColors.primary),
+              // ── Back button ──────────────────────────────────────────
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE5E7F0)),
                   ),
+                  child: const Icon(Icons.arrow_back_ios_new_rounded,
+                      size: 16, color: AppColors.primary),
                 ),
+              ),
               const SizedBox(height: 40),
 
               // ── Icon + title ─────────────────────────────────────────────
@@ -109,24 +155,18 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                       width: 64,
                       height: 64,
                       decoration: BoxDecoration(
-                        color: _done
-                            ? const Color(0xFFF0FDF4)
-                            : AppColors.primary.withOpacity(0.08),
+                        color: AppColors.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: Icon(
-                        _done
-                            ? Icons.check_circle_outline_rounded
-                            : Icons.lock_open_rounded,
+                      child: const Icon(
+                        Icons.lock_open_rounded,
                         size: 32,
-                        color: _done
-                            ? const Color(0xFF16A34A)
-                            : AppColors.primary,
+                        color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      _done ? 'Password updated!' : 'New password',
+                      'New password',
                       style: GoogleFonts.sora(
                           fontSize: 24,
                           fontWeight: FontWeight.w800,
@@ -134,9 +174,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _done
-                          ? 'You can now sign in with your new password'
-                          : 'Create a strong password for your account',
+                      'Create a strong password for your account',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                           fontSize: 14,
@@ -148,53 +186,50 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
               ),
               const SizedBox(height: 40),
 
-              // ── Form or success ──────────────────────────────────────────
-              if (_done)
-                _SuccessBody()
-              else
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const FieldLabel(label: 'New password'),
-                      const SizedBox(height: 8),
-                      AuthPasswordField(
-                        controller: _passCtrl,
-                        obscure: _obscurePass,
-                        hint: 'Min. 8 characters',
-                        onToggle: () =>
-                            setState(() => _obscurePass = !_obscurePass),
-                        validator: _passValidator,
-                        externalTrigger: _confirmCtrl,
-                      ),
-                      const SizedBox(height: 10),
-                      ValueListenableBuilder(
-                        valueListenable: _passCtrl,
-                        builder: (_, __, ___) =>
-                            _StrengthBar(strength: _strength),
-                      ),
-                      const SizedBox(height: 20),
-                      const FieldLabel(label: 'Confirm password'),
-                      const SizedBox(height: 8),
-                      AuthPasswordField(
-                        controller: _confirmCtrl,
-                        obscure: _obscureConfirm,
-                        hint: 'Re-enter your password',
-                        onToggle: () =>
-                            setState(() => _obscureConfirm = !_obscureConfirm),
-                        validator: _confirmValidator,
-                        externalTrigger: _passCtrl,
-                      ),
-                      const SizedBox(height: 32),
-                      AuthPrimaryButton(
-                        label: 'Update Password',
-                        loading: vm.isLoading,
-                        onPressed: _submit,
-                      ),
-                    ],
-                  ),
+              // ── Form ──────────────────────────────────────────
+              Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const FieldLabel(label: 'New password'),
+                    const SizedBox(height: 8),
+                    AuthPasswordField(
+                      controller: _passCtrl,
+                      obscure: _obscurePass,
+                      hint: 'Min. 8 characters',
+                      onToggle: () =>
+                          setState(() => _obscurePass = !_obscurePass),
+                      validator: _passValidator,
+                      externalTrigger: _confirmCtrl,
+                    ),
+                    const SizedBox(height: 10),
+                    ValueListenableBuilder(
+                      valueListenable: _passCtrl,
+                      builder: (_, __, ___) =>
+                          _StrengthBar(strength: _strength),
+                    ),
+                    const SizedBox(height: 20),
+                    const FieldLabel(label: 'Confirm password'),
+                    const SizedBox(height: 8),
+                    AuthPasswordField(
+                      controller: _confirmCtrl,
+                      obscure: _obscureConfirm,
+                      hint: 'Re-enter your password',
+                      onToggle: () =>
+                          setState(() => _obscureConfirm = !_obscureConfirm),
+                      validator: _confirmValidator,
+                      externalTrigger: _passCtrl,
+                    ),
+                    const SizedBox(height: 32),
+                    AuthPrimaryButton(
+                      label: 'Update Password',
+                      loading: vm.isLoading,
+                      onPressed: _submit,
+                    ),
+                  ],
                 ),
+              ),
             ],
           ),
         ),
@@ -204,36 +239,7 @@ class _ResetPasswordViewState extends State<ResetPasswordView> {
   }
 }
 
-class _SuccessBody extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            onPressed: () => Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const LoginView()),
-                  (_) => false,
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14)),
-              elevation: 0,
-            ),
-            child: Text('Sign In',
-                style: GoogleFonts.sora(
-                    fontSize: 15, fontWeight: FontWeight.w700)),
-          ),
-        ),
-      ],
-    );
-  }
-}
+
 
 class _StrengthBar extends StatelessWidget {
   const _StrengthBar({required this.strength});

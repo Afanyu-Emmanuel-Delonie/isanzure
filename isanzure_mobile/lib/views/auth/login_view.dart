@@ -23,6 +23,8 @@ class _LoginViewState extends State<LoginView> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscure = true;
+  String? _serverEmailError;
+  String? _serverPassError;
 
   @override
   void dispose() {
@@ -32,6 +34,7 @@ class _LoginViewState extends State<LoginView> {
   }
 
   String? _emailValidator(String? v) {
+    if (_serverEmailError != null) return _serverEmailError;
     if (v == null || v.trim().isEmpty) return 'Email is required';
     if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim())) {
       return 'Enter a valid email';
@@ -40,12 +43,17 @@ class _LoginViewState extends State<LoginView> {
   }
 
   String? _passValidator(String? v) {
+    if (_serverPassError != null) return _serverPassError;
     if (v == null || v.isEmpty) return 'Password is required';
     if (v.length < 6) return 'At least 6 characters';
     return null;
   }
 
   Future<void> _submit() async {
+    setState(() {
+      _serverEmailError = null;
+      _serverPassError = null;
+    });
     if (!_formKey.currentState!.validate()) {
       AppToast.error(context, 'Please fix the highlighted fields');
       return;
@@ -66,7 +74,18 @@ class _LoginViewState extends State<LoginView> {
         ),
       );
     } else {
-      AppToast.error(context, vm.errorMessage ?? 'Login failed');
+      final msg = vm.errorMessage?.toLowerCase() ?? '';
+      setState(() {
+        if (msg.contains('email')) {
+          _serverEmailError = vm.errorMessage;
+        } else if (msg.contains('password')) {
+          _serverPassError = vm.errorMessage;
+        }
+      });
+      _formKey.currentState!.validate();
+      if (_serverEmailError == null && _serverPassError == null) {
+        AppToast.error(context, vm.errorMessage ?? 'Login failed');
+      }
     }
   }
 
@@ -120,6 +139,12 @@ class _LoginViewState extends State<LoginView> {
                       icon: Icons.email_outlined,
                       keyboardType: TextInputType.emailAddress,
                       validator: _emailValidator,
+                      onChanged: (_) {
+                        if (_serverEmailError != null) {
+                          setState(() => _serverEmailError = null);
+                          _formKey.currentState!.validate();
+                        }
+                      },
                     ),
                     const SizedBox(height: 20),
                     const FieldLabel(label: 'Password'),
@@ -129,6 +154,12 @@ class _LoginViewState extends State<LoginView> {
                       obscure: _obscure,
                       onToggle: () => setState(() => _obscure = !_obscure),
                       validator: _passValidator,
+                      onChanged: (_) {
+                        if (_serverPassError != null) {
+                          setState(() => _serverPassError = null);
+                          _formKey.currentState!.validate();
+                        }
+                      },
                     ),
                     const SizedBox(height: 10),
                     Align(
