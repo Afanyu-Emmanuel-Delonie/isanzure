@@ -4,6 +4,7 @@ import '../../core/constants/app_theme.dart';
 import '../../models/mock-trip-model.dart';
 import '../../viewmodels/booking_details_viewmodel.dart';
 import '../../views/bookings/bookings_details.dart';
+import '../../views/ticket/ticket_view.dart';
 
 const int kServiceFee = 200;
 
@@ -347,17 +348,17 @@ class _BookingSuccessViewState extends State<BookingSuccessView>
                           height: 52,
                           child: OutlinedButton.icon(
                             onPressed: () {
-                              // Frontend only — ticket view coming later
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Ticket view coming soon!',
-                                    style: GoogleFonts.inter(fontSize: 13),
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => TicketView(
+                                    trip: widget.trip,
+                                    seat: widget.seat,
+                                    passengerName: widget.passengerName,
+                                    paymentMethod: widget.paymentMethod,
+                                    paymentRef: widget.paymentRef,
+                                    total: _total,
                                   ),
-                                  backgroundColor: AppColors.primary,
-                                  behavior: SnackBarBehavior.floating,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
                                 ),
                               );
                             },

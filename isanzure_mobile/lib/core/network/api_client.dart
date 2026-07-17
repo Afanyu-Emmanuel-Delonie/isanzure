@@ -1,57 +1,42 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
-import '../constants/app_constants.dart';
-import '../errors/app_exception.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiClient {
-  final http.Client _client;
+  late final Dio _dio;
+  final FlutterSecureStorage _storage;
 
-  ApiClient({http.Client? client}) : _client = client ?? http.Client();
-
-  Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(AppConstants.tokenKey);
+  ApiClient(this._storage) {
+    _dio = Dio(BaseOptions(
+      baseUrl: 'http://10.0.2.2:5000/api/v1',
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+    ));
+    _setupInterceptors();
   }
 
-  Future<Map<String, String>> _headers({bool auth = true}) async {
-    final headers = {'Content-Type': 'application/json'};
-    if (auth) {
-      final token = await _getToken();
-      if (token != null) headers['Authorization'] = 'Bearer $token';
-    }
-    return headers;
+  void _setupInterceptors() {
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = await _storage.read(key: 'auth_key');
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        return handler.next(options);
+      },
+      onError: (DioException e, handler) {
+        if (e.response?.statusCode == 401) {
+          _storage.delete(key: 'auth_key');
+        }
+        return handler.next(e);
+      },
+    ));
   }
 
-  Future<dynamic> get(String path, {bool auth = true}) async {
-    final res = await _client.get(
-      Uri.parse('${AppConstants.baseUrl}$path'),
-      headers: await _headers(auth: auth),
-    );
-    return _handle(res);
-  }
+  Future<Response> post(String path, dynamic data) =>
+      _dio.post(path, data: data);
 
-  Future<dynamic> post(String path, Map<String, dynamic> body, {bool auth = true}) async {
-    final res = await _client.post(
-      Uri.parse('${AppConstants.baseUrl}$path'),
-      headers: await _headers(auth: auth),
-      body: jsonEncode(body),
-    );
-    return _handle(res);
-  }
+  Future<Response> put(String path, dynamic data) =>
+      _dio.put(path, data: data);
 
-  Future<dynamic> delete(String path) async {
-    final res = await _client.delete(
-      Uri.parse('${AppConstants.baseUrl}$path'),
-      headers: await _headers(),
-    );
-    return _handle(res);
-  }
-
-  dynamic _handle(http.Response res) {
-    final body = jsonDecode(res.body);
-    if (res.statusCode >= 200 && res.statusCode < 300) return body;
-    final message = body['error'] ?? 'Something went wrong';
-    throw AppException(message, statusCode: res.statusCode);
-  }
+  Future<Response> get(String path) => _dio.get(path);
 }

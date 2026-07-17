@@ -38,6 +38,9 @@ dependencies:
   table_calendar: 3.0.9
   ticket_widget: ^1.0.2
   provider: ^6.1.5+1
+  qr_flutter: ^4.0.0
+  flutter_secure_storage: ^10.3.1
+  dio: ^5.9.2
 
 dev_dependencies:
   flutter_test:

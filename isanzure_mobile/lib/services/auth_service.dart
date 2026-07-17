@@ -1,62 +1,89 @@
-import 'package:shared_preferences/shared_preferences.dart';
-import '../core/constants/app_constants.dart';
-import '../core/network/api_client.dart';
-import '../models/user_model.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:isanzure_mobile/core/network/api_client.dart';
+import 'package:isanzure_mobile/models/user_model.dart';
 
 class AuthService {
-  final ApiClient _api;
+  final ApiClient apiClient;
+  final FlutterSecureStorage storage;
 
-  AuthService({ApiClient? api}) : _api = api ?? ApiClient();
+  AuthService(this.apiClient, this.storage);
 
-  Future<Map<String, String>> login(String email, String password) async {
-    final data = await _api.post('/login', {'email': email, 'password': password}, auth: false);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(AppConstants.tokenKey, data['token']);
-    await prefs.setString(AppConstants.roleKey, data['role']);
-    return {'token': data['token'], 'role': data['role']};
+  Future<bool> hasToken() async {
+    final token = await storage.read(key: 'auth_key');
+    return token != null && token.isNotEmpty;
   }
 
-  Future<Map<String, String>> signup(String name, String email, String phone, String password, {String role = 'passenger'}) async {
-    final data = await _api.post('/signup', {
-      'name': name, 'email': email, 'phone': phone, 'password': password, 'role': role,
-    }, auth: false);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(AppConstants.tokenKey, data['token']);
-    await prefs.setString(AppConstants.roleKey, data['role']);
-    return {'token': data['token'], 'role': data['role']};
+  // Step 1 of signup — sends OTP to email
+  Future<void> initiateSignup({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+    required String role,
+  }) async {
+    await apiClient.post('/auth/signup', {
+      'name': name,
+      'email': email,
+      'phone': phone,
+      'password': password,
+      'role': role,
+    });
   }
 
-  Future<UserModel> getProfile() async {
-    final data = await _api.get('/profile');
-    return UserModel.fromJson(data);
+  // Step 2 of signup — verifies OTP and creates account, returns token
+  Future<String> verifyOtp({
+    required String email,
+    required String otp,
+    required String name,
+    required String phone,
+    required String password,
+    required String role,
+  }) async {
+    final response = await apiClient.post('/auth/verify-otp', {
+      'email': email,
+      'otp': otp,
+      'name': name,
+      'phone': phone,
+      'password': password,
+      'role': role,
+    });
+    return response.data['token'] as String;
   }
 
-  Future<UserModel> updateProfile(String name, String phone) async {
-    final data = await _api.post('/profile', {'name': name, 'phone': phone});
-    return UserModel.fromJson(data);
+  Future<void> login(String email, String password) async {
+    final response = await apiClient.post('/auth/login', {
+      'email': email,
+      'password': password,
+    });
+    final token = response.data['token'] as String;
+    await storage.write(key: 'auth_key', value: token);
+  }
+
+  Future<UserModel> getCurrentUser() async {
+    final response = await apiClient.get('/auth/profile');
+    return UserModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<void> forgotPassword(String email) async {
-    await _api.post('/forgot-password', {'email': email}, auth: false);
+    await apiClient.post('/auth/forgot-password', {'email': email});
   }
 
-  Future<void> resetPassword(String token, String newPassword) async {
-    await _api.post('/reset-password', {'reset_token': token, 'new_password': newPassword}, auth: false);
+  Future<void> resetPassword(String resetToken, String newPassword) async {
+    await apiClient.post('/auth/reset-password', {
+      'reset_token': resetToken,
+      'new_password': newPassword,
+    });
+  }
+
+  Future<UserModel> updateProfile(String name, String phone) async {
+    final response = await apiClient.put('/auth/profile', {
+      'name': name,
+      'phone': phone,
+    });
+    return UserModel.fromJson(response.data as Map<String, dynamic>);
   }
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(AppConstants.tokenKey);
-    await prefs.remove(AppConstants.roleKey);
-  }
-
-  Future<bool> isLoggedIn() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(AppConstants.tokenKey) != null;
-  }
-
-  Future<String?> getRole() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(AppConstants.roleKey);
+    await storage.delete(key: 'auth_key');
   }
 }

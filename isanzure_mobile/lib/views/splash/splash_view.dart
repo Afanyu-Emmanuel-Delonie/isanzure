@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:isanzure_mobile/core/constants/app_theme.dart';
-import 'package:isanzure_mobile/views/home/home_view.dart';
-import 'package:isanzure_mobile/views/onboarding/landing_view.dart';
+import 'package:isanzure_mobile/viewmodels/auth_viewmodel.dart';
+import 'package:isanzure_mobile/views/auth/login_view.dart';
+import 'package:isanzure_mobile/views/main_shell.dart';
+import 'package:provider/provider.dart';
 
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -44,12 +46,18 @@ class _SplashViewState extends State<SplashView> with SingleTickerProviderStateM
 
     _controller.forward();
 
-    Future.delayed(const Duration(milliseconds: 5000), () {
+    Future.delayed(const Duration(milliseconds: 2500), () async {
       if (!mounted) return;
+      final vm = context.read<AuthViewModel>();
+      await vm.checkAuthStatus();
+      if (!mounted) return;
+      final destination = vm.status == AuthStatus.authenticated
+          ? const MainShell()
+          : const LoginView();
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 600),
-          pageBuilder: (_, __, ___) => const HomeView(),
+          pageBuilder: (_, __, ___) => destination,
           transitionsBuilder: (_, anim, __, child) =>
               FadeTransition(opacity: anim, child: child),
         ),

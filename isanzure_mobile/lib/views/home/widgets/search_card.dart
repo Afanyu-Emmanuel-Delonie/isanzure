@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../../../core/constants/app_theme.dart';
+import '../../search/search_results_view.dart';
 
 
 // ── Rwanda cities ─────────────────────────────────────────────────────────────
@@ -533,7 +534,20 @@ class _SearchCardState extends State<SearchCard>
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () {
+                if (_from == null || _to == null) return;
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SearchResultsView(
+                      from: _from!,
+                      to: _to!,
+                      date: _selectedDate,
+                      period: _period,
+                    ),
+                  ),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
