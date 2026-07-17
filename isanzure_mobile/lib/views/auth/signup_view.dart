@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/constants/app_theme.dart';
+import '../../viewmodels/auth_viewmodel.dart';
 import '../../views/main_shell.dart';
 import '../bookings/widgets/booking_text_field.dart';
 import 'widgets/auth_widgets.dart';
@@ -24,7 +26,6 @@ class _SignupViewState extends State<SignupView> {
   bool _obscurePass = true;
   bool _obscureConfirm = true;
   bool _agreed = false;
-  bool _loading = false;
 
   @override
   void dispose() {
@@ -41,28 +42,42 @@ class _SignupViewState extends State<SignupView> {
     if (!_agreed) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Please accept the terms to continue',
-              style: GoogleFonts.inter(fontSize: 13)),
+          content: Text('Please accept the terms to continue', style: GoogleFonts.inter(fontSize: 13)),
           backgroundColor: Colors.redAccent,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
         ),
       );
       return;
     }
-    setState(() => _loading = true);
-    await Future.delayed(const Duration(milliseconds: 1400));
-    if (!mounted) return;
-    setState(() => _loading = false);
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        transitionDuration: const Duration(milliseconds: 500),
-        pageBuilder: (_, __, ___) => const MainShell(),
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
-      ),
+
+    final viewModel = context.read<AuthViewModel>();
+    final success = await viewModel.signup(
+      name: _nameCtrl.text.trim(),
+      email: _emailCtrl.text.trim(),
+      phone: _phoneCtrl.text.trim(),
+      password: _passCtrl.text.trim(),
+      role: 'passenger',
     );
+
+    if (!mounted) return;
+
+    if (success) {
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 500),
+          pageBuilder: (_, __, ___) => const MainShell(),
+          transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(viewModel.errorMessage ?? 'Signup failed'),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   @override
@@ -70,7 +85,8 @@ class _SignupViewState extends State<SignupView> {
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: Consumer<AuthViewModel>(
+          builder: (context, vm, _) => SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(24, 120, 24, 40),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -173,7 +189,7 @@ class _SignupViewState extends State<SignupView> {
                           const SizedBox(height: 32),
                           AuthPrimaryButton(
                             label: 'Create Account',
-                            loading: _loading,
+                            loading: vm.isLoading,
                             onPressed: _submit,
                           ),
                           const SizedBox(height: 32),
@@ -205,6 +221,7 @@ class _SignupViewState extends State<SignupView> {
                   ],
                 ),
               ),
+        ),
       ),
     );
   }
