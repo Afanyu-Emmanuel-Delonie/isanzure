@@ -10,6 +10,9 @@ class BookingModel {
   final double price;
   final String plateNumber;
   final String agencyName;
+  final String status;
+  final String? paymentReference;
+  final String? message;
 
   const BookingModel({
     required this.id,
@@ -23,6 +26,9 @@ class BookingModel {
     required this.price,
     required this.plateNumber,
     required this.agencyName,
+    required this.status,
+    this.paymentReference,
+    this.message,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> j) => BookingModel(
@@ -37,5 +43,8 @@ class BookingModel {
         price: (j['price'] as num).toDouble(),
         plateNumber: j['plate_number'],
         agencyName: j['agency_name'],
+        status: j['status'] ?? 'pending',
+        paymentReference: j['payment_reference'],
+        message: j['message'],
       );
 }

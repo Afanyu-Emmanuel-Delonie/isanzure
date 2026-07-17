@@ -80,7 +80,9 @@
           "plate_number":   { "type": "string" },
           "capacity":       { "type": "integer" },
           "agency_id":      { "type": "string", "format": "uuid" },
-          "agency_name":    { "type": "string" }
+          "agency_name":    { "type": "string" },
+          "available_seats": { "type": "integer" },
+          "booked_seats":    { "type": "array", "items": { "type": "integer" } }
         }
       },
       "Booking": {
@@ -96,7 +98,10 @@
           "destination":    { "type": "string" },
           "price":          { "type": "number" },
           "plate_number":   { "type": "string" },
-          "agency_name":    { "type": "string" }
+          "agency_name":    { "type": "string" },
+          "status":         { "type": "string", "enum": ["pending", "confirmed", "cancelled"] },
+          "payment_reference": { "type": "string" },
+          "message":        { "type": "string" }
         }
       }
     }

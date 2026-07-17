@@ -95,11 +95,23 @@ def create_booking(user_id, schedule_id, seat_number):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO bookings (user_id, schedule_id, seat_number)
-                VALUES (%s, %s, %s)
-                RETURNING id, user_id, schedule_id, seat_number, created_at;
+                UPDATE schedules
+                SET available_seats = available_seats - 1
+                WHERE id = %s AND available_seats > 0
                 """,
-                (user_id, schedule_id, seat_number)
+                (schedule_id,)
+            )
+
+            if cur.rowcount == 0:
+                raise ValueError("No seats available on this schedule.")
+
+            cur.execute(
+               """
+               INSERT INTO bookings (user_id, schedule_id, seat_number, status)
+                VALUES (%s, %s, %s, 'pending')
+                RETURNING id, user_id, schedule_id, seat_number, created_at;
+               """ ,
+               (user_id, schedule_id, seat_number)
             )
             conn.commit()
             return cur.fetchone()
@@ -171,9 +183,27 @@ def get_booking_by_id(booking_id):
 def cancel_booking(booking_id, user_id):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
+            # 1. Update status to cancelled
             cur.execute(
-                "DELETE FROM bookings WHERE id = %s AND user_id = %s RETURNING id;",
+                """
+                UPDATE bookings 
+                SET status = 'cancelled' 
+                WHERE id = %s AND user_id = %s AND status != 'cancelled'
+                RETURNING schedule_id;
+                """,
                 (booking_id, user_id)
             )
-            conn.commit()
-            return cur.fetchone()
+            result = cur.fetchone()
+            
+            if result:
+                schedule_id = result[0]
+                # 2. Increment seat count back
+                cur.execute(
+                    "UPDATE schedules SET available_seats = available_seats + 1 WHERE id = %s",
+                    (schedule_id,)
+                )
+                return True
+            return False
+
+
+

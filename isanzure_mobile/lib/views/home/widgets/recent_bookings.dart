@@ -3,11 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:ticket_widget/ticket_widget.dart';
 
 import '../../../core/constants/app_theme.dart';
-import '../../../models/mock-trip-model.dart';
+import '../../../models/booking_model.dart';
 import '../../bookings/bookings_details.dart';
 
 class RecentBookings extends StatelessWidget {
-  const RecentBookings({super.key});
+  const RecentBookings({super.key, required this.bookings});
+
+  final List<BookingModel> bookings;
 
   @override
   Widget build(BuildContext context) {
@@ -36,9 +38,9 @@ class RecentBookings extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.zero,
             clipBehavior: Clip.none,
-            itemCount: mockRecentBookings.length,
+            itemCount: bookings.length,
             separatorBuilder: (_, __) => const SizedBox(width: 14),
-            itemBuilder: (_, i) => _RecentTicket(booking: mockRecentBookings[i]),
+            itemBuilder: (_, i) => _RecentTicket(booking: bookings[i]),
           ),
         ),
       ],
@@ -48,12 +50,10 @@ class RecentBookings extends StatelessWidget {
 
 class _RecentTicket extends StatelessWidget {
   const _RecentTicket({required this.booking});
-  final RecentBooking booking;
+  final BookingModel booking;
 
   @override
   Widget build(BuildContext context) {
-    final trip = booking.trip;
-    // ~85% of screen width so the next card peeks
     final width = MediaQuery.of(context).size.width * 0.82;
 
     return TicketWidget(
@@ -76,27 +76,25 @@ class _RecentTicket extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
               child: Column(
                 children: [
-                  // Route row
                   Row(
                     children: [
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(trip.from,
+                            Text(booking.origin,
                                 style: GoogleFonts.sora(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.primary)),
                             const SizedBox(height: 2),
-                            Text(trip.date,
+                            Text(booking.departureTime.split('T').first,
                                 style: GoogleFonts.inter(
                                     fontSize: 11,
                                     color: AppColors.bodyTextSecondary)),
                           ],
                         ),
                       ),
-                      // Bus icon with dashed lines
                       Expanded(
                         child: Row(
                           children: [
@@ -122,14 +120,14 @@ class _RecentTicket extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(trip.to.trim(),
+                            Text(booking.destination.trim(),
                                 textAlign: TextAlign.end,
                                 style: GoogleFonts.sora(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.secondary)),
                             const SizedBox(height: 2),
-                            Text(trip.takeoffTime,
+                            Text(booking.departureTime.split('T').length > 1 ? booking.departureTime.split('T')[1].substring(0, 5) : '',
                                 style: GoogleFonts.inter(
                                     fontSize: 11,
                                     color: AppColors.bodyTextSecondary)),
@@ -145,7 +143,7 @@ class _RecentTicket extends StatelessWidget {
                       const Icon(Icons.business_outlined,
                           size: 13, color: AppColors.bodyTextSecondary),
                       const SizedBox(width: 4),
-                      Text(trip.agency,
+                      Text(booking.agencyName,
                           style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -154,7 +152,7 @@ class _RecentTicket extends StatelessWidget {
                       const Icon(Icons.confirmation_number_outlined,
                           size: 13, color: AppColors.bodyTextSecondary),
                       const SizedBox(width: 4),
-                      Text(booking.ref,
+                      Text(booking.paymentReference ?? 'N/A',
                           style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -187,7 +185,7 @@ class _RecentTicket extends StatelessWidget {
                         style: GoogleFonts.inter(
                             fontSize: 10,
                             color: AppColors.bodyTextSecondary)),
-                    Text('RWF ${trip.amount}',
+                    Text('RWF ${booking.price.toInt()}',
                         style: GoogleFonts.sora(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -207,7 +205,7 @@ class _RecentTicket extends StatelessWidget {
                         const Icon(Icons.event_seat_outlined,
                             size: 13, color: AppColors.accent),
                         const SizedBox(width: 4),
-                        Text('${booking.seat}',
+                        Text('${booking.seatNumber}',
                             style: GoogleFonts.sora(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w800,
@@ -218,12 +216,7 @@ class _RecentTicket extends StatelessWidget {
                 ),
                 // Rebook button
                 ElevatedButton.icon(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BookingsDetails(trip: trip),
-                    ),
-                  ),
+                  onPressed: () {},
                   icon: const Icon(Icons.refresh_rounded, size: 13),
                   label: Text('Rebook',
                       style: GoogleFonts.sora(

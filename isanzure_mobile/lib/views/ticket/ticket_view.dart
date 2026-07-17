@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/constants/app_theme.dart';
-import '../../models/mock-trip-model.dart';
+import '../../models/schedule_model.dart';
 import '../../viewmodels/booking_details_viewmodel.dart';
 
 class TicketView extends StatelessWidget {
   const TicketView({
     super.key,
-    required this.trip,
+    required this.schedule,
     required this.seat,
     required this.passengerName,
     required this.paymentMethod,
@@ -17,7 +17,7 @@ class TicketView extends StatelessWidget {
     required this.total,
   });
 
-  final TripSummary trip;
+  final ScheduleModel schedule;
   final int seat;
   final String passengerName;
   final PaymentMethod paymentMethod;
@@ -25,7 +25,7 @@ class TicketView extends StatelessWidget {
   final int total;
 
   String get _qrData =>
-      'REF:$paymentRef|FROM:${trip.from}|TO:${trip.to}|SEAT:$seat|PAX:$passengerName|DATE:${trip.date}';
+      'REF:$paymentRef|FROM:${schedule.origin}|TO:${schedule.destination}|SEAT:$seat|PAX:$passengerName|DATE:${schedule.departureTime}';
 
   String get _methodLabel {
     switch (paymentMethod) {
@@ -67,7 +67,7 @@ class TicketView extends StatelessWidget {
           children: [
             // ── Ticket card ──────────────────────────────────────────────
             _TicketCard(
-              trip: trip,
+              schedule: schedule,
               seat: seat,
               passengerName: passengerName,
               methodLabel: _methodLabel,
@@ -108,7 +108,7 @@ class TicketView extends StatelessWidget {
 
 class _TicketCard extends StatelessWidget {
   const _TicketCard({
-    required this.trip,
+    required this.schedule,
     required this.seat,
     required this.passengerName,
     required this.methodLabel,
@@ -117,7 +117,7 @@ class _TicketCard extends StatelessWidget {
     required this.qrData,
   });
 
-  final TripSummary trip;
+  final ScheduleModel schedule;
   final int seat;
   final String passengerName;
   final String methodLabel;
@@ -144,7 +144,7 @@ class _TicketCard extends StatelessWidget {
         child: Column(
           children: [
             // ── Header banner ────────────────────────────────────────────
-            _TicketHeader(trip: trip),
+            _TicketHeader(schedule: schedule),
 
             // ── Details section ──────────────────────────────────────────
             Padding(
@@ -166,19 +166,19 @@ class _TicketCard extends StatelessWidget {
                   _DetailRow(
                     icon: Icons.calendar_today_rounded,
                     label: 'Date',
-                    value: trip.date,
+                    value: schedule.departureTime.split('T').first,
                   ),
                   const _Divider(),
                   _DetailRow(
                     icon: Icons.access_time_rounded,
                     label: 'Departure',
-                    value: trip.takeoffTime,
+                    value: schedule.departureTime.split('T').length > 1 ? schedule.departureTime.split('T')[1].substring(0, 5) : '',
                   ),
                   const _Divider(),
                   _DetailRow(
                     icon: Icons.directions_bus_rounded,
                     label: 'Agency',
-                    value: trip.agency,
+                    value: schedule.agencyName,
                   ),
                   const _Divider(),
                   _DetailRow(
@@ -289,8 +289,8 @@ class _TicketCard extends StatelessWidget {
 // ── Header banner ─────────────────────────────────────────────────────────────
 
 class _TicketHeader extends StatelessWidget {
-  const _TicketHeader({required this.trip});
-  final TripSummary trip;
+  const _TicketHeader({required this.schedule});
+  final ScheduleModel schedule;
 
   @override
   Widget build(BuildContext context) {
@@ -322,7 +322,7 @@ class _TicketHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              _CityBlock(city: trip.from, label: 'FROM'),
+              _CityBlock(city: schedule.origin, label: 'FROM'),
               Expanded(
                 child: Column(
                   children: [
@@ -339,7 +339,7 @@ class _TicketHeader extends StatelessWidget {
                           child: Container(
                             width: 32,
                             height: 32,
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               color: AppColors.secondary,
                               shape: BoxShape.circle,
                             ),
@@ -356,13 +356,13 @@ class _TicketHeader extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Text(trip.takeoffTime,
+                    Text(schedule.departureTime.split('T').length > 1 ? schedule.departureTime.split('T')[1].substring(0, 5) : '',
                         style: GoogleFonts.inter(
                             fontSize: 10, color: Colors.white54)),
                   ],
                 ),
               ),
-              _CityBlock(city: trip.to.trim(), label: 'TO', alignEnd: true),
+              _CityBlock(city: schedule.destination.trim(), label: 'TO', alignEnd: true),
             ],
           ),
 
@@ -372,11 +372,11 @@ class _TicketHeader extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _Chip(icon: Icons.calendar_today_rounded, label: trip.date),
+              _Chip(icon: Icons.calendar_today_rounded, label: schedule.departureTime.split('T').first),
               const SizedBox(width: 10),
               _Chip(
                   icon: Icons.confirmation_number_outlined,
-                  label: trip.plateNumber),
+                  label: schedule.plateNumber),
             ],
           ),
         ],

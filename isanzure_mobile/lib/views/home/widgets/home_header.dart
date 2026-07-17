@@ -73,12 +73,13 @@ class HomeHeader extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(greeting, // Dynamically inserted here!
+              Text(
+                  greeting,
                   style: GoogleFonts.inter(
                       color: Colors.white60,
                       fontSize: 12,
                       fontWeight: FontWeight.w500)),
-              Text('$displayName 👋', // Dynamically inserted here!
+              Text('$displayName 👋',
                   style: GoogleFonts.sora(
                       color: Colors.white,
                       fontSize: 14,

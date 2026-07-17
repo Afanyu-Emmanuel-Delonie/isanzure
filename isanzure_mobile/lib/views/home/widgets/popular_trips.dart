@@ -1,59 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:isanzure_mobile/views/bookings/bookings_details.dart';
 import 'package:ticket_widget/ticket_widget.dart';
 
 import '../../../core/constants/app_theme.dart';
-import '../../../models/mock-trip-model.dart';
-
-
-
-const _mockTrips = [
-  TripSummary(
-    from: 'Butare',
-    to: 'Kigali ',
-    date: '12 Jul 2025',
-    takeoffTime: '06:30 AM',
-    amount: 2500,
-    spotsAvailable: 8,
-    agency: 'Volcano Express',
-    plateNumber: 'RAC 412 B',
-  ),
-  TripSummary(
-    from: 'Kigali',
-    to: 'Gisenyi ',
-    date: '12 Jul 2025',
-    takeoffTime: '07:00 AM',
-    amount: 3000,
-    spotsAvailable: 3,
-    agency: 'Virunga Express',
-    plateNumber: 'RAB 887 C',
-  ),
-  TripSummary(
-    from: 'Kigali',
-    to: 'Mombasa',
-    date: '13 Jul 2025',
-    takeoffTime: '08:15 AM',
-    amount: 1800,
-    spotsAvailable: 12,
-    agency: 'Stella Express',
-    plateNumber: 'RAD 203 A',
-  ),
-  TripSummary(
-    from: 'Rubavu',
-    to: 'Kigali',
-    date: '14 Jul 2025',
-    takeoffTime: '05:45 AM',
-    amount: 4000,
-    spotsAvailable: 1,
-    agency: 'Horizon Express',
-    plateNumber: 'RAE 556 D',
-  ),
-];
+import '../../../models/route_model.dart';
 
 // ── Popular Trips section ─────────────────────────────────────────────────────
 class PopularTrips extends StatelessWidget {
-  const PopularTrips({super.key});
+  const PopularTrips({super.key, required this.routes});
+
+  final List<RouteModel> routes;
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +19,7 @@ class PopularTrips extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Popular Trips',
+            Text('Popular Routes',
                 style: GoogleFonts.sora(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -80,10 +36,10 @@ class PopularTrips extends StatelessWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           padding: EdgeInsets.zero,
-          itemCount: _mockTrips.length,
+          itemCount: routes.length,
           itemBuilder: (_, i) => Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: _AnimatedTripTicket(trip: _mockTrips[i], index: i),
+            child: _AnimatedTripTicket(route: routes[i], index: i),
           ),
         ),
       ],
@@ -93,8 +49,8 @@ class PopularTrips extends StatelessWidget {
 
 // ── Animated wrapper — staggered fade+slide per card index ──────────────────
 class _AnimatedTripTicket extends StatefulWidget {
-  const _AnimatedTripTicket({required this.trip, required this.index});
-  final TripSummary trip;
+  const _AnimatedTripTicket({required this.route, required this.index});
+  final RouteModel route;
   final int index;
 
   @override
@@ -137,24 +93,23 @@ class _AnimatedTripTicketState extends State<_AnimatedTripTicket>
         opacity: _fade,
         child: SlideTransition(
           position: _slide,
-          child: _TripTicket(trip: widget.trip),
+          child: _TripTicket(route: widget.route),
         ),
       );
 }
 
 // ── Single ticket card ────────────────────────────────────────────────────────
 class _TripTicket extends StatelessWidget {
-  const _TripTicket({required this.trip});
-  final TripSummary trip;
+  const _TripTicket({required this.route});
+  final RouteModel route;
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.of(context).size.width - 40; // parent already has h:20 padding each side
-    final isLow = trip.spotsAvailable <= 3;
+    final width = MediaQuery.of(context).size.width - 40; 
 
     return TicketWidget(
       width: width,
-      height: 178,
+      height: 140,
       isCornerRounded: true,
       color: Colors.white,
       shadow: [
@@ -171,28 +126,22 @@ class _TripTicket extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.fromLTRB(18, 14, 18, 0),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Route row
                   Row(
                     children: [
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(trip.from,
+                            Text(route.origin,
                                 style: GoogleFonts.sora(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.primary)),
-                            const SizedBox(height: 2),
-                            Text(trip.date,
-                                style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: AppColors.bodyTextSecondary)),
                           ],
                         ),
                       ),
-                      // Bus icon with dashed lines
                       Expanded(
                         child: Row(
                           children: [
@@ -207,7 +156,7 @@ class _TripTicket extends StatelessWidget {
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
-                                    Icons.directions_bus_rounded,
+                                    Icons.map_outlined,
                                     size: 14,
                                     color: AppColors.primary),
                               ),
@@ -220,43 +169,15 @@ class _TripTicket extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(trip.to,
+                            Text(route.destination,
                                 textAlign: TextAlign.end,
                                 style: GoogleFonts.sora(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.secondary)),
-                            const SizedBox(height: 2),
-                            Text(trip.takeoffTime,
-                                style: GoogleFonts.inter(
-                                    fontSize: 11,
-                                    color: AppColors.bodyTextSecondary)),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  // Agency + plate row
-                  Row(
-                    children: [
-                      const Icon(Icons.business_outlined,
-                          size: 13, color: AppColors.bodyTextSecondary),
-                      const SizedBox(width: 4),
-                      Text(trip.agency,
-                          style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.bodyText)),
-                      const Spacer(),
-                      const Icon(Icons.directions_car_outlined,
-                          size: 13, color: AppColors.bodyTextSecondary),
-                      const SizedBox(width: 4),
-                      Text(trip.plateNumber,
-                          style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.bodyText)),
                     ],
                   ),
                 ],
@@ -280,51 +201,20 @@ class _TripTicket extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Price',
+                    Text('Starting from',
                         style: GoogleFonts.inter(
                             fontSize: 10,
                             color: AppColors.bodyTextSecondary)),
-                    Text('RWF ${trip.amount}',
+                    Text('RWF ${route.price.toInt()}',
                         style: GoogleFonts.sora(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: AppColors.primary)),
                   ],
                 ),
-                // Seats
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text('Seats left',
-                        style: GoogleFonts.inter(
-                            fontSize: 10,
-                            color: AppColors.bodyTextSecondary)),
-                    Row(
-                      children: [
-                        Icon(Icons.event_seat_outlined,
-                            size: 13,
-                            color:
-                                isLow ? Colors.redAccent : AppColors.accent),
-                        const SizedBox(width: 4),
-                        Text('${trip.spotsAvailable}',
-                            style: GoogleFonts.sora(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w800,
-                                color: isLow
-                                    ? Colors.redAccent
-                                    : AppColors.accent)),
-                      ],
-                    ),
-                  ],
-                ),
-                // Book button
+                // Find Schedules button
                 ElevatedButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BookingsDetails(trip: trip),
-                    ),
-                  ),
+                  onPressed: () {},
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
@@ -336,7 +226,7 @@ class _TripTicket extends StatelessWidget {
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
-                  child: Text('Book Now',
+                  child: Text('Find Trips',
                       style: GoogleFonts.sora(
                           fontSize: 12, fontWeight: FontWeight.w700)),
                 ),

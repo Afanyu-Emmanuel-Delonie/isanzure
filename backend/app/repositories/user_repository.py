@@ -29,10 +29,18 @@ def create_user(name, email, phone, password_hash, role='passenger'):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO users (name, email, phone_number, password_hash, role) VALUES (%s, %s, %s, %s, %s) RETURNING id;",
+                """
+                INSERT INTO users (name, email, phone_number, password_hash, role) 
+                VALUES (%s, %s, %s, %s, %s) 
+                ON CONFLICT (email) DO NOTHING 
+                RETURNING id;
+                """,
                 (name, email, phone, password_hash, role)
             )
-            return cur.fetchone()[0]
+            result = cur.fetchone()
+            if result:
+                return result[0]
+            raise ValueError("A user with this email already exists.")
 
 def save_otp(email, otp_hash, expires_at):
     cleanup_expired_tokens()

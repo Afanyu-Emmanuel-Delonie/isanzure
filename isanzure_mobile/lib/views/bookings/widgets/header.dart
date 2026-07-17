@@ -2,170 +2,197 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/constants/app_header.dart';
-import '../../../core/constants/trip_route_indicator.dart';
-import '../../../models/mock-trip-model.dart';
+import '../../../../core/constants/app_theme.dart';
+import '../../../../models/schedule_model.dart';
 
 class DetailsHeader extends StatelessWidget {
   const DetailsHeader({
     super.key,
-    required this.trip,
-    this.parallax = 0,
-    this.contentOpacity = 1,
+    required this.schedule,
+    required this.parallax,
+    required this.contentOpacity,
   });
 
-  final TripSummary trip;
-
-  /// 0..1 — drives the map background upward as user scrolls
+  final ScheduleModel schedule;
   final double parallax;
-
-  /// 0..1 — fades the text content as user scrolls into the card
   final double contentOpacity;
 
   @override
   Widget build(BuildContext context) {
-    return AppHeader(
-      bottomPadding: 30,
-      parallax: parallax,
-      contentOpacity: contentOpacity,
-      leading: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Container(
+      width: double.infinity,
+      color: AppColors.primary,
+      child: Stack(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.of(context).maybePop(),
-            child: Container(
-              width: 38,
-              height: 38,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
+          Positioned.fill(
+            child: Opacity(
+              opacity: 0.1,
+              child: Transform.translate(
+                offset: Offset(0, parallax * -50),
+                child: Image.asset(
+                  'assets/img/map-bg.png',
+                  fit: BoxFit.cover,
+                  color: Colors.white,
+                  colorBlendMode: BlendMode.srcIn,
+                ),
               ),
-              child: const Icon(Icons.arrow_back_ios_new_rounded,
-                  color: Colors.white, size: 20),
             ),
           ),
-
-          const SizedBox(width: 20.0),
-
-          Text(
-            'Trip Details',
-            style: GoogleFonts.sora(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white, size: 20),
+                        style: IconButton.styleFrom(
+                          backgroundColor: Colors.white.withOpacity(0.15),
+                        ),
+                      ),
+                      Text('Booking Details',
+                          style: GoogleFonts.sora(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white)),
+                      const SizedBox(width: 48), // balance back button
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Opacity(
+                    opacity: contentOpacity,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _CityBlock(
+                            city: schedule.origin, label: 'FROM'),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Container(
+                                        height: 1.5, color: Colors.white24),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8),
+                                    child: Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.secondary,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: AppColors.secondary
+                                                .withOpacity(0.4),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 4),
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Icon(
+                                          Icons.arrow_forward_rounded,
+                                          color: Colors.white,
+                                          size: 16),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Container(
+                                        height: 1.5, color: Colors.white24),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(schedule.departureTime.split('T').length > 1 ? schedule.departureTime.split('T')[1].substring(0, 5) : '',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white)),
+                            ],
+                          ),
+                        ),
+                        _CityBlock(
+                            city: schedule.destination.trim(),
+                            label: 'TO',
+                            alignEnd: true),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Opacity(
+                    opacity: contentOpacity,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _Chip(
+                            icon: Icons.calendar_today_rounded,
+                            label: schedule.departureTime.split('T').first),
+                        const SizedBox(width: 10),
+                        _Chip(
+                            icon: Icons.directions_bus_rounded,
+                            label: schedule.agencyName),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          )
+          ),
         ],
       ),
-      actions: const [
-        AppHeaderIconButton(icon: Icons.notifications_none),
-      ],
-      child: _TripInfoRow(trip: trip),
     );
   }
 }
 
-// ── Trip info row: from/to, date, time, seats, plate ────────────────────────
-class _TripInfoRow extends StatelessWidget {
-  const _TripInfoRow({required this.trip});
-  final TripSummary trip;
+class _CityBlock extends StatelessWidget {
+  const _CityBlock({required this.city, required this.label, this.alignEnd = false});
+  final String city;
+  final String label;
+  final bool alignEnd;
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Start',
-                      style: GoogleFonts.inter(
-                          color: Colors.white60, fontSize: 12)),
-                  const SizedBox(height: 2,),
-                  Text(trip.from,
-                      style: GoogleFonts.sora(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ),
-            Expanded(
-              child: RouteBusIndicator(
-                iconColor: Colors.white,
-                lineColor: Colors.white38,
-              ),
-            ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                      'End',
-                      style: GoogleFonts.inter(
-                          color: Colors.white60, fontSize: 12)),
-                  const SizedBox(height: 2,),
-                  Text(trip.to,
-                      textAlign: TextAlign.end,
-                      style: GoogleFonts.sora(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _InfoChip(icon: Icons.business_outlined, label: trip.agency),
-            const SizedBox(width: 10),
-            _InfoChip(icon: Icons.directions_car_outlined, label: trip.plateNumber),
-          ],
-        ),
-        const SizedBox(height: 14),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _InfoChip(
-                icon: Icons.calendar_month,
-                label: trip.date,
-            ),
-            _InfoChip(
-                icon: Icons.event_seat, label: '${trip.spotsAvailable} seats Left'),
-            _InfoChip(
-                icon: Icons.access_time, label: trip.takeoffTime),
-          ],
-        ),
+        Text(label, style: GoogleFonts.inter(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500)),
+        const SizedBox(height: 4),
+        Text(city, style: GoogleFonts.sora(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
       ],
     );
   }
 }
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.label});
+class _Chip extends StatelessWidget {
+  const _Chip({required this.icon, required this.label});
   final IconData icon;
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white70, size: 14),
+          Icon(icon, color: Colors.white, size: 14),
           const SizedBox(width: 6),
-          Text(label,
-              style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500)),
+          Text(label, style: GoogleFonts.inter(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
         ],
-      );
+      ),
+    );
   }
 }

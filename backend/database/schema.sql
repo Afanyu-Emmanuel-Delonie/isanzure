@@ -58,7 +58,9 @@ CREATE TABLE IF NOT EXISTS schedules (
     bus_id UUID REFERENCES buses(id) ON DELETE CASCADE,
     route_id UUID REFERENCES routes(id) ON DELETE CASCADE,
     departure_time TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    available_seats INTEGER DEFAULT 0,
+    CONSTRAINT check_seats_positive CHECK (available_seats >= 0)
 );
 
 -- 6. Bookings
@@ -67,6 +69,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     user_id UUID REFERENCES users(id),
     schedule_id UUID REFERENCES schedules(id),
     seat_number INTEGER NOT NULL,
+    status TEXT DEFAULT 'pending',
+    payment_reference TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(schedule_id, seat_number)
 );
@@ -76,5 +80,6 @@ CREATE TABLE IF NOT EXISTS invitations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email TEXT NOT NULL,
     agency_id UUID REFERENCES agencies(id) ON DELETE CASCADE,
-    status TEXT DEFAULT 'pending'
+    status TEXT DEFAULT 'pending',
+    role TEXT DEFAULT 'agency_admin'
 );

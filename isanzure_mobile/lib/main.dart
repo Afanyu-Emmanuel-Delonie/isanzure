@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:isanzure_mobile/services/auth_service.dart';
+import 'package:isanzure_mobile/services/booking_service.dart';
+import 'package:isanzure_mobile/services/transit_service.dart';
 import 'package:isanzure_mobile/viewmodels/auth_viewmodel.dart';
+import 'package:isanzure_mobile/viewmodels/home_viewmodel.dart';
+import 'package:isanzure_mobile/viewmodels/bookings_viewmodel.dart';
 import 'package:provider/provider.dart';
 
 // Your existing imports
@@ -25,10 +29,22 @@ void main() {
         ProxyProvider2<ApiClient, FlutterSecureStorage, AuthService>(
           update: (_, api, storage, __) => AuthService(api, storage),
         ),
+        ProxyProvider<ApiClient, TransitService>(
+          update: (_, api, __) => TransitService(api),
+        ),
+        ProxyProvider<ApiClient, BookingService>(
+          update: (_, api, __) => BookingService(api),
+        ),
 
         // 3. ViewModel Layer (Depends on AuthService)
         ChangeNotifierProvider(
           create: (context) => AuthViewModel(context.read<AuthService>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => HomeViewModel(context.read<TransitService>(), context.read<BookingService>()),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => BookingsViewModel(context.read<BookingService>()),
         ),
       ],
       child: const IsanzureApp(),

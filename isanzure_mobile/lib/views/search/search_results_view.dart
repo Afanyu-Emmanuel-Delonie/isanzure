@@ -1,25 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import 'package:ticket_widget/ticket_widget.dart';
 
 import '../../core/constants/app_theme.dart';
-import '../../models/mock-trip-model.dart';
+import '../../models/schedule_model.dart';
+import '../../services/transit_service.dart';
 import '../bookings/bookings_details.dart';
 import '../home/widgets/search_card.dart';
-
-// ── Mock trips pool ───────────────────────────────────────────────────────────
-const _allTrips = [
-  TripSummary(from: 'Kigali', to: 'Butare', date: '14 Jul 2026', takeoffTime: '06:00 AM', amount: 2500, spotsAvailable: 8, agency: 'Volcano Express', plateNumber: 'RAC 412 B'),
-  TripSummary(from: 'Kigali', to: 'Butare', date: '14 Jul 2026', takeoffTime: '08:30 AM', amount: 2500, spotsAvailable: 3, agency: 'Virunga Express', plateNumber: 'RAB 887 C'),
-  TripSummary(from: 'Kigali', to: 'Butare', date: '14 Jul 2026', takeoffTime: '10:00 AM', amount: 2800, spotsAvailable: 12, agency: 'Stella Express', plateNumber: 'RAD 203 A'),
-  TripSummary(from: 'Kigali', to: 'Butare', date: '14 Jul 2026', takeoffTime: '01:00 PM', amount: 2500, spotsAvailable: 1, agency: 'Horizon Express', plateNumber: 'RAE 556 D'),
-  TripSummary(from: 'Kigali', to: 'Butare', date: '14 Jul 2026', takeoffTime: '03:30 PM', amount: 2200, spotsAvailable: 6, agency: 'Volcano Express', plateNumber: 'RAC 100 A'),
-  TripSummary(from: 'Kigali', to: 'Butare', date: '14 Jul 2026', takeoffTime: '06:00 PM', amount: 2500, spotsAvailable: 9, agency: 'Virunga Express', plateNumber: 'RAB 321 D'),
-  TripSummary(from: 'Kigali', to: 'Gisenyi', date: '14 Jul 2026', takeoffTime: '07:00 AM', amount: 3000, spotsAvailable: 5, agency: 'Virunga Express', plateNumber: 'RAB 887 C'),
-  TripSummary(from: 'Kigali', to: 'Musanze', date: '14 Jul 2026', takeoffTime: '06:30 AM', amount: 1800, spotsAvailable: 10, agency: 'Stella Express', plateNumber: 'RAD 203 A'),
-  TripSummary(from: 'Butare', to: 'Kigali', date: '14 Jul 2026', takeoffTime: '07:00 AM', amount: 2500, spotsAvailable: 7, agency: 'Volcano Express', plateNumber: 'RAC 412 B'),
-  TripSummary(from: 'Butare', to: 'Kigali', date: '14 Jul 2026', takeoffTime: '09:00 AM', amount: 2200, spotsAvailable: 4, agency: 'Stella Express', plateNumber: 'RAD 203 A'),
-];
 
 enum _SortBy { earliest, cheapest, mostSeats }
 
@@ -48,25 +36,64 @@ class _SearchResultsViewState extends State<SearchResultsView> {
   int? _maxPrice;
   bool _availableOnly = false;
 
-  Set<String> get _allAgencies => _allTrips.map((t) => t.agency).toSet();
+  bool _isLoading = true;
+  String? _error;
+  List<ScheduleModel> _allTrips = [];
 
-  List<TripSummary> get _results {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchSchedules();
+    });
+  }
+
+  Future<void> _fetchSchedules() async {
+    try {
+      final transitService = context.read<TransitService>();
+      final routes = await transitService.getRoutes();
+      final route = routes.cast<dynamic>().firstWhere(
+        (r) => r.origin.toLowerCase() == widget.from.toLowerCase() &&
+               r.destination.toLowerCase() == widget.to.toLowerCase(),
+        orElse: () => null,
+      );
+      if (route == null) {
+        throw Exception('Route not found for ${widget.from} to ${widget.to}');
+      }
+      final schedules = await transitService.getSchedulesForRoute(route.id);
+      if (mounted) {
+        setState(() {
+          _allTrips = schedules;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString().replaceAll('Exception: ', '');
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Set<String> get _allAgencies => _allTrips.map((t) => t.agencyName).toSet();
+
+  List<ScheduleModel> get _results {
     var list = _allTrips.where((t) {
-      if (t.from.toLowerCase() != widget.from.toLowerCase()) return false;
-      if (t.to.trim().toLowerCase() != widget.to.trim().toLowerCase()) return false;
-      if (_agencyFilter.isNotEmpty && !_agencyFilter.contains(t.agency)) return false;
-      if (_maxPrice != null && t.amount > _maxPrice!) return false;
-      if (_availableOnly && t.spotsAvailable == 0) return false;
+      if (_agencyFilter.isNotEmpty && !_agencyFilter.contains(t.agencyName)) return false;
+      if (_maxPrice != null && t.price > _maxPrice!) return false;
+      if (_availableOnly && (t.availableSeats == null || t.availableSeats == 0)) return false;
       return true;
     }).toList();
 
     switch (_sortBy) {
       case _SortBy.earliest:
-        list.sort((a, b) => a.takeoffTime.compareTo(b.takeoffTime));
+        list.sort((a, b) => a.departureTime.compareTo(b.departureTime));
       case _SortBy.cheapest:
-        list.sort((a, b) => a.amount.compareTo(b.amount));
+        list.sort((a, b) => a.price.compareTo(b.price));
       case _SortBy.mostSeats:
-        list.sort((a, b) => b.spotsAvailable.compareTo(a.spotsAvailable));
+        list.sort((a, b) => (b.availableSeats ?? 0).compareTo(a.availableSeats ?? 0));
     }
     return list;
   }
@@ -366,41 +393,65 @@ class _SearchResultsViewState extends State<SearchResultsView> {
             ),
           ),
         ],
-        body: results.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 72, height: 72,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.07),
-                        shape: BoxShape.circle,
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.error_outline_rounded,
+                              size: 48, color: Colors.red.shade300),
+                          const SizedBox(height: 16),
+                          Text('Oops!',
+                              style: GoogleFonts.sora(
+                                  fontSize: 18, fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 8),
+                          Text(_error!,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                  color: AppColors.bodyTextSecondary)),
+                        ],
                       ),
-                      child: const Icon(Icons.search_off_rounded,
-                          size: 32, color: AppColors.primary),
                     ),
-                    const SizedBox(height: 16),
-                    Text('No trips found',
-                        style: GoogleFonts.sora(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary)),
-                    const SizedBox(height: 6),
-                    Text('Try adjusting your filters',
-                        style: GoogleFonts.inter(
-                            fontSize: 13,
-                            color: AppColors.bodyTextSecondary)),
-                  ],
-                ),
-              )
-            : ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
-                physics: const BouncingScrollPhysics(),
-                itemCount: results.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 16),
-                itemBuilder: (_, i) => _ResultCard(trip: results[i]),
-              ),
+                  )
+                : results.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 72, height: 72,
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.07),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.search_off_rounded,
+                                  size: 32, color: AppColors.primary),
+                            ),
+                            const SizedBox(height: 16),
+                            Text('No trips found',
+                                style: GoogleFonts.sora(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary)),
+                            const SizedBox(height: 6),
+                            Text('Try adjusting your filters or date',
+                                style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    color: AppColors.bodyTextSecondary)),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
+                        physics: const BouncingScrollPhysics(),
+                        itemCount: results.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 16),
+                        itemBuilder: (_, i) => _ResultCard(schedule: results[i]),
+                      ),
       ),
     );
   }
@@ -446,13 +497,13 @@ class _SortBar extends StatelessWidget implements PreferredSizeWidget {
 
 // ── Result card — identical TicketWidget style as popular trips ───────────────
 class _ResultCard extends StatelessWidget {
-  const _ResultCard({required this.trip});
-  final TripSummary trip;
+  const _ResultCard({required this.schedule});
+  final ScheduleModel schedule;
 
   @override
   Widget build(BuildContext context) {
     final width = MediaQuery.of(context).size.width - 40;
-    final isLow = trip.spotsAvailable <= 3;
+    final isLow = (schedule.availableSeats ?? 0) <= 3;
 
     return TicketWidget(
       width: width,
@@ -479,13 +530,13 @@ class _ResultCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(trip.from,
+                            Text(schedule.origin,
                                 style: GoogleFonts.sora(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.primary)),
                             const SizedBox(height: 2),
-                            Text(trip.date,
+                            Text(schedule.departureTime.split('T').first,
                                 style: GoogleFonts.inter(
                                     fontSize: 11,
                                     color: AppColors.bodyTextSecondary)),
@@ -516,14 +567,14 @@ class _ResultCard extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(trip.to.trim(),
+                            Text(schedule.destination.trim(),
                                 textAlign: TextAlign.end,
                                 style: GoogleFonts.sora(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
                                     color: AppColors.secondary)),
                             const SizedBox(height: 2),
-                            Text(trip.takeoffTime,
+                            Text(schedule.departureTime.split('T').length > 1 ? schedule.departureTime.split('T')[1].substring(0, 5) : '',
                                 style: GoogleFonts.inter(
                                     fontSize: 11,
                                     color: AppColors.bodyTextSecondary)),
@@ -538,7 +589,7 @@ class _ResultCard extends StatelessWidget {
                       const Icon(Icons.business_outlined,
                           size: 13, color: AppColors.bodyTextSecondary),
                       const SizedBox(width: 4),
-                      Text(trip.agency,
+                      Text(schedule.agencyName,
                           style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -547,7 +598,7 @@ class _ResultCard extends StatelessWidget {
                       const Icon(Icons.directions_car_outlined,
                           size: 13, color: AppColors.bodyTextSecondary),
                       const SizedBox(width: 4),
-                      Text(trip.plateNumber,
+                      Text(schedule.plateNumber,
                           style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
@@ -573,7 +624,7 @@ class _ResultCard extends StatelessWidget {
                     Text('Price',
                         style: GoogleFonts.inter(
                             fontSize: 10, color: AppColors.bodyTextSecondary)),
-                    Text('RWF ${trip.amount}',
+                    Text('RWF ${schedule.price.toInt()}',
                         style: GoogleFonts.sora(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -592,7 +643,7 @@ class _ResultCard extends StatelessWidget {
                             size: 13,
                             color: isLow ? Colors.redAccent : AppColors.accent),
                         const SizedBox(width: 4),
-                        Text('${trip.spotsAvailable}',
+                        Text('${schedule.availableSeats ?? 0}',
                             style: GoogleFonts.sora(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w800,
@@ -605,7 +656,7 @@ class _ResultCard extends StatelessWidget {
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => BookingsDetails(trip: trip)),
+                        builder: (_) => BookingsDetails(schedule: schedule)),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,

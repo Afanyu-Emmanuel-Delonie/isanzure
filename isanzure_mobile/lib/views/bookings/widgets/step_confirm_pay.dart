@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_theme.dart';
-import '../../../models/mock-trip-model.dart';
+import '../../../models/schedule_model.dart';
 import '../../../views/home/widgets/popular_trips.dart';
 
 const int kServiceFee = 200;
@@ -12,7 +12,7 @@ enum PaymentMethod { mtn, airtel, card }
 class StepConfirmPay extends StatefulWidget {
   const StepConfirmPay({
     super.key,
-    required this.trip,
+    required this.schedule,
     required this.selectedSeat,
     required this.passengerName,
     required this.passengerId,
@@ -25,7 +25,7 @@ class StepConfirmPay extends StatefulWidget {
     this.readOnly = false,
   });
 
-  final TripSummary trip;
+  final ScheduleModel schedule;
   final int? selectedSeat;
   final String passengerName;
   final String passengerId;
@@ -65,7 +65,7 @@ class _StepConfirmPayState extends State<StepConfirmPay>
     super.dispose();
   }
 
-  int get _total => widget.trip.amount + kServiceFee;
+  int get _total => widget.schedule.price.toInt() + kServiceFee;
 
   @override
   Widget build(BuildContext context) {
@@ -103,7 +103,7 @@ class _StepConfirmPayState extends State<StepConfirmPay>
                       child: Row(
                         children: [
                           _CityChip(
-                              city: widget.trip.from,
+                              city: widget.schedule.origin,
                               color: AppColors.primary),
                           const Expanded(
                             child: Row(
@@ -126,7 +126,7 @@ class _StepConfirmPayState extends State<StepConfirmPay>
                             ),
                           ),
                           _CityChip(
-                              city: widget.trip.to.trim(),
+                              city: widget.schedule.destination.trim(),
                               color: AppColors.secondary),
                         ],
                       ),
@@ -140,12 +140,12 @@ class _StepConfirmPayState extends State<StepConfirmPay>
                           _DetailRow(
                               icon: Icons.calendar_today_outlined,
                               label: 'Date',
-                              value: widget.trip.date),
+                              value: widget.schedule.departureTime.split('T').first),
                           const SizedBox(height: 10),
                           _DetailRow(
                               icon: Icons.access_time_rounded,
                               label: 'Departure',
-                              value: widget.trip.takeoffTime),
+                              value: widget.schedule.departureTime.split('T').length > 1 ? widget.schedule.departureTime.split('T')[1].substring(0, 5) : ''),
                           const SizedBox(height: 10),
                           _DetailRow(
                               icon: Icons.event_seat_rounded,
@@ -171,7 +171,7 @@ class _StepConfirmPayState extends State<StepConfirmPay>
                           _DetailRow(
                               icon: Icons.business_outlined,
                               label: 'Agency',
-                              value: widget.trip.agency),
+                              value: widget.schedule.agencyName),
                         ],
                       ),
                     ),
@@ -183,7 +183,7 @@ class _StepConfirmPayState extends State<StepConfirmPay>
                         children: [
                           _PriceRow(
                               label: 'Ticket price',
-                              value: 'RWF ${widget.trip.amount}'),
+                              value: 'RWF ${widget.schedule.price.toInt()}'),
                           const SizedBox(height: 8),
                           _PriceRow(
                               label: 'Service fee',

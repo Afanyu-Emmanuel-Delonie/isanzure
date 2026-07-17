@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:isanzure_mobile/views/home/widgets/home_header.dart';
 import 'package:isanzure_mobile/views/home/widgets/popular_trips.dart';
 import 'package:isanzure_mobile/views/home/widgets/recent_bookings.dart';
 import 'package:isanzure_mobile/views/home/widgets/search_card.dart';
+import 'package:isanzure_mobile/viewmodels/home_viewmodel.dart';
 
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
@@ -29,6 +31,9 @@ class _HomeViewState extends State<HomeView>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<HomeViewModel>().fetchHomeData();
+    });
 
     _mountCtrl = AnimationController(
       vsync: this,
@@ -98,64 +103,74 @@ class _HomeViewState extends State<HomeView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SingleChildScrollView(
-        controller: _scrollCtrl,
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
-        ),
-        child: Column(
-          children: [
-            // ── Header ──────────────────────────────────────────────────
-            HomeHeader(
-              parallax: _headerParallax,
-              contentOpacity: _headerOpacity,
+      body: Consumer<HomeViewModel>(
+        builder: (context, vm, child) {
+          return SingleChildScrollView(
+            controller: _scrollCtrl,
+            physics: const BouncingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
             ),
-
-            // ── Overlapping content via Transform (visual only, no layout hack) ──
-            Transform.translate(
-              offset: const Offset(0, -100),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    FadeTransition(
-                      opacity: _searchFade,
-                      child: SlideTransition(
-                        position: _searchSlide,
-                        child: const SearchCard(),
-                      ),
-                    ),
-
-                    const SizedBox(height: 28),
-
-                    FadeTransition(
-                      opacity: _recentFade,
-                      child: SlideTransition(
-                        position: _recentSlide,
-                        child: const RecentBookings(),
-                      ),
-                    ),
-
-                    const SizedBox(height: 28),
-
-                    FadeTransition(
-                      opacity: _tripsFade,
-                      child: SlideTransition(
-                        position: _tripsSlide,
-                        child: const PopularTrips(),
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-                  ],
+            child: Column(
+              children: [
+                // ── Header ──────────────────────────────────────────────────
+                HomeHeader(
+                  parallax: _headerParallax,
+                  contentOpacity: _headerOpacity,
                 ),
-              ),
+
+                // ── Overlapping content via Transform ───────────────────────
+                Transform.translate(
+                  offset: const Offset(0, -100),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FadeTransition(
+                          opacity: _searchFade,
+                          child: SlideTransition(
+                            position: _searchSlide,
+                            child: const SearchCard(),
+                          ),
+                        ),
+
+                        const SizedBox(height: 28),
+
+                        if (vm.isLoading)
+                          const Center(child: CircularProgressIndicator())
+                        else ...[
+                          if (vm.recentBookings.isNotEmpty) ...[
+                            FadeTransition(
+                              opacity: _recentFade,
+                              child: SlideTransition(
+                                position: _recentSlide,
+                                child: RecentBookings(bookings: vm.recentBookings),
+                              ),
+                            ),
+                            const SizedBox(height: 28),
+                          ],
+
+                          if (vm.routes.isNotEmpty) ...[
+                            FadeTransition(
+                              opacity: _tripsFade,
+                              child: SlideTransition(
+                                position: _tripsSlide,
+                                child: PopularTrips(routes: vm.routes),
+                              ),
+                            ),
+                          ],
+                        ],
+
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 0),
+              ],
             ),
-            // Compensate for the -100 translate gap at the bottom
-            const SizedBox(height: 0),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

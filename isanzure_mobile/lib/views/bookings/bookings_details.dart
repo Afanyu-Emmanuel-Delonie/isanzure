@@ -3,20 +3,24 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_theme.dart';
-import '../../models/mock-trip-model.dart';
+import '../../models/schedule_model.dart';
+import '../../services/booking_service.dart';
 import '../../viewmodels/booking_details_viewmodel.dart';
 import '../../views/bookings/booking_success_view.dart';
 import 'widgets/booking_text_field.dart';
 import 'widgets/header.dart';
 
 class BookingsDetails extends StatelessWidget {
-  const BookingsDetails({super.key, required this.trip});
-  final TripSummary trip;
+  const BookingsDetails({super.key, required this.schedule});
+  final ScheduleModel schedule;
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => BookingDetailsViewModel(trip: trip),
+      create: (ctx) => BookingDetailsViewModel(
+        schedule: schedule,
+        bookingService: ctx.read<BookingService>(),
+      ),
       child: const _BookingsDetailsView(),
     );
   }
@@ -69,7 +73,7 @@ class _BookingsDetailsViewState extends State<_BookingsDetailsView> {
         context,
         PageRouteBuilder(
           pageBuilder: (_, anim, __) => BookingSuccessView(
-            trip: vm.trip,
+            schedule: vm.schedule,
             seat: result['seat'] as int,
             passengerName: result['passengerName'] as String,
             passengerId: '',
@@ -114,7 +118,7 @@ class _BookingsDetailsViewState extends State<_BookingsDetailsView> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DetailsHeader(
-              trip: vm.trip,
+              schedule: vm.schedule,
               parallax: _headerParallax,
               contentOpacity: _headerOpacity,
             ),
@@ -157,11 +161,11 @@ class _BookingsDetailsViewState extends State<_BookingsDetailsView> {
                     const SizedBox(height: 8),
                     _SeatsSelector(vm: vm),
 
-                    if (vm.seats >= vm.trip.spotsAvailable)
+                    if (vm.schedule.availableSeats != null && vm.seats >= vm.schedule.availableSeats!)
                       Padding(
                         padding: const EdgeInsets.only(top: 6, left: 4),
                         child: Text(
-                          'Max ${vm.trip.spotsAvailable} seats available',
+                          'Max ${vm.schedule.availableSeats} seats available',
                           style: GoogleFonts.inter(
                               fontSize: 11, color: Colors.orange.shade700),
                         ),
@@ -475,11 +479,11 @@ class _BookingSummaryCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 14),
-          _SummaryRow(label: 'Paying to', value: vm.trip.agency),
+          _SummaryRow(label: 'Paying to', value: vm.schedule.agencyName),
           const SizedBox(height: 8),
           _SummaryRow(
               label: 'Route',
-              value: '${vm.trip.from} → ${vm.trip.to}'),
+              value: '${vm.schedule.origin} → ${vm.schedule.destination}'),
           const SizedBox(height: 8),
           _SummaryRow(label: 'Seats', value: '${vm.seats}'),
           const SizedBox(height: 8),

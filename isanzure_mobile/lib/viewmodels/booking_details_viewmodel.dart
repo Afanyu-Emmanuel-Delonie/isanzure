@@ -1,15 +1,17 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import '../models/mock-trip-model.dart';
+import '../models/schedule_model.dart';
+import '../services/booking_service.dart';
 
 enum PaymentMethod { mtn, airtel, card }
 
 class BookingDetailsViewModel extends ChangeNotifier {
-  BookingDetailsViewModel({required this.trip}) {
+  BookingDetailsViewModel({required this.schedule, required this.bookingService}) {
     seatsController.addListener(notifyListeners);
   }
 
-  final TripSummary trip;
+  final ScheduleModel schedule;
+  final BookingService bookingService;
 
   final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
@@ -24,10 +26,10 @@ class BookingDetailsViewModel extends ChangeNotifier {
   bool isSubmitting = false;
 
   int get seats => int.tryParse(seatsController.text) ?? 1;
-  int get total => seats * trip.amount;
+  int get total => (seats * schedule.price).toInt();
 
   void setSeats(int value) {
-    final clamped = value.clamp(1, trip.spotsAvailable);
+    final clamped = value.clamp(1, schedule.availableSeats ?? 1);
     seatsController.text = clamped.toString();
     notifyListeners();
   }
@@ -130,18 +132,22 @@ class BookingDetailsViewModel extends ChangeNotifier {
       return null;
     }
 
-    if (seats > trip.spotsAvailable) {
-      throw Exception('Only ${trip.spotsAvailable} seat(s) available');
+    if (seats > (schedule.availableSeats ?? 1)) {
+      throw Exception('Only ${schedule.availableSeats} seat(s) available');
     }
 
     isSubmitting = true;
     notifyListeners();
 
     try {
-      await Future.delayed(const Duration(seconds: 2));
+      final booking = await bookingService.createBooking(
+        scheduleId: schedule.id,
+        seatNumber: randomSeat(),
+      );
+
       return {
-        'seat': randomSeat(),
-        'ref': 'ISZ${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
+        'seat': booking.seatNumber,
+        'ref': booking.paymentReference ?? 'N/A',
         'passengerName': nameController.text.trim(),
         'paymentMethod': selectedPayment!,
       };

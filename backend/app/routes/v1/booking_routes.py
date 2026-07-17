@@ -1,13 +1,13 @@
 from flask import Blueprint, request, jsonify, send_file
 from app.repositories.booking_repository import (
     create_schedule, get_schedule_by_id, get_schedules_by_route,
-    get_schedules_by_agency, get_booked_seats,
-    create_booking, get_booking_by_id, get_bookings_by_user,
-    get_bookings_by_schedule, cancel_booking
+    get_schedules_by_agency, get_booked_seats, get_booking_by_id, 
+    get_bookings_by_user, get_bookings_by_schedule, cancel_booking
 )
 from app.repositories.user_repository import get_user_by_id
 from app.utils.auth_utils import token_required, roles_required
 from app.services.ticket_service import generate_ticket_pdf, verify_ticket_token
+from app.services.booking_service import BookingService
 
 booking_bp = Blueprint('booking', __name__)
 
@@ -119,14 +119,13 @@ def book_seat(current_user_id):
     if not isinstance(seat, int) or seat <= 0:
         return jsonify({"error": "seat_number must be a positive integer."}), 400
 
-    try:
-        booking = create_booking(current_user_id, data['schedule_id'], seat)
-    except Exception as e:
-        if hasattr(e, 'pgcode') and e.pgcode == '23505':
-            return jsonify({"error": "Seat already booked."}), 409
-        return jsonify({"error": "Could not complete booking."}), 400
+    result = BookingService.book_seat(current_user_id, data['schedule_id'], seat)
+    
+    if not result["success"]:
+        status_code = 409 if result["message"] == "Seat already booked." else 400
+        return jsonify({"error": result["message"]}), status_code
 
-    full = get_booking_by_id(booking[0])
+    full = get_booking_by_id(result["booking_id"])
     return jsonify({
         "id":             str(full[0]),
         "seat_number":    full[1],
@@ -138,7 +137,9 @@ def book_seat(current_user_id):
         "destination":    full[7],
         "price":          float(full[8]),
         "plate_number":   full[9],
-        "agency_name":    full[10]
+        "agency_name":    full[10],
+        "status":         "pending", # added status from the updated schema
+        "message":        result["message"]
     }), 201
 
 

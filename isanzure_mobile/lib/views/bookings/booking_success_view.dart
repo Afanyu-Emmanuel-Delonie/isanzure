@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/app_theme.dart';
-import '../../models/mock-trip-model.dart';
+import '../../models/schedule_model.dart';
 import '../../viewmodels/booking_details_viewmodel.dart';
 import '../../views/bookings/bookings_details.dart';
 import '../../views/ticket/ticket_view.dart';
@@ -11,7 +11,7 @@ const int kServiceFee = 200;
 class BookingSuccessView extends StatefulWidget {
   const BookingSuccessView({
     super.key,
-    required this.trip,
+    required this.schedule,
     required this.seat,
     required this.passengerName,
     required this.passengerId,
@@ -19,7 +19,7 @@ class BookingSuccessView extends StatefulWidget {
     required this.paymentRef,
   });
 
-  final TripSummary trip;
+  final ScheduleModel schedule;
   final int seat;
   final String passengerName;
   final String passengerId;
@@ -42,6 +42,9 @@ class _BookingSuccessViewState extends State<BookingSuccessView>
   late final Animation<double> _contentFade;
   late final Animation<double> _buttonsFade;
   late final Animation<Offset> _buttonsSlide;
+
+  late final AnimationController _busCtrl;
+  late final Animation<Offset> _busSlide;
 
   @override
   void initState() {
@@ -85,13 +88,23 @@ class _BookingSuccessViewState extends State<BookingSuccessView>
         parent: _contentCtrl,
         curve: const Interval(0.4, 1.0, curve: Curves.easeOut));
 
+    _busCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 3000));
+    _busSlide = Tween<Offset>(
+            begin: const Offset(-6, 0), end: const Offset(6, 0))
+        .animate(CurvedAnimation(parent: _busCtrl, curve: Curves.linear));
+    
     _checkCtrl.forward();
     Future.delayed(const Duration(milliseconds: 450),
-        () { if (mounted) _contentCtrl.forward(); });
+        () { if (mounted) {
+          _contentCtrl.forward();
+          _busCtrl.repeat();
+        }});
   }
 
   @override
   void dispose() {
+    _busCtrl.dispose();
     _checkCtrl.dispose();
     _contentCtrl.dispose();
     super.dispose();
@@ -105,7 +118,7 @@ class _BookingSuccessViewState extends State<BookingSuccessView>
     }
   }
 
-  int get _total => widget.trip.amount + kServiceFee;
+  int get _total => widget.schedule.price.toInt() + kServiceFee;
 
   @override
   Widget build(BuildContext context) {
@@ -200,7 +213,19 @@ class _BookingSuccessViewState extends State<BookingSuccessView>
                 ),
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
+              
+              // ── Animated Bus ─────────────────────────────────────────────
+              FadeTransition(
+                opacity: _contentFade,
+                child: SlideTransition(
+                  position: _busSlide,
+                  child: const Icon(Icons.directions_bus_rounded, 
+                      color: AppColors.primary, size: 40),
+                ),
+              ),
+
+              const SizedBox(height: 20),
 
               // ── Ticket card ──────────────────────────────────────────────
               FadeTransition(
@@ -234,22 +259,22 @@ class _BookingSuccessViewState extends State<BookingSuccessView>
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               _TicketCity(
-                                  city: widget.trip.from,
-                                  sub: widget.trip.date),
+                                  city: widget.schedule.origin,
+                                  sub: widget.schedule.departureTime.split('T').first),
                               Column(
                                 children: [
                                   const Icon(Icons.directions_bus_rounded,
                                       color: Colors.white70, size: 20),
                                   const SizedBox(height: 2),
-                                  Text(widget.trip.takeoffTime,
+                                  Text(widget.schedule.departureTime.split('T').length > 1 ? widget.schedule.departureTime.split('T')[1].substring(0, 5) : '',
                                       style: GoogleFonts.inter(
                                           fontSize: 10,
                                           color: Colors.white60)),
                                 ],
                               ),
                               _TicketCity(
-                                  city: widget.trip.to.trim(),
-                                  sub: widget.trip.agency,
+                                  city: widget.schedule.destination.trim(),
+                                  sub: widget.schedule.agencyName,
                                   alignEnd: true),
                             ],
                           ),
@@ -352,7 +377,7 @@ class _BookingSuccessViewState extends State<BookingSuccessView>
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => TicketView(
-                                    trip: widget.trip,
+                                    schedule: widget.schedule,
                                     seat: widget.seat,
                                     passengerName: widget.passengerName,
                                     paymentMethod: widget.paymentMethod,
